@@ -1,13 +1,16 @@
 """Frame sources: live monitor-mode sniffing or pcap replay (both via scapy)."""
-import queue, threading, time, numpy as np
-from scapy.all import sniff, PcapReader, RadioTap, Dot11
+import queue, threading, time
+from scapy.all import sniff, PcapReader, Dot11
+
+ASSOC = {0, 1, 2, 3}      # association / reassociation request + response
+DISASSOC = {10, 12}       # disassociation, deauthentication
 
 def parse(p):
+    """Convert a Wi-Fi frame into an event matching the training data, or None if irrelevant."""
     if not p.haslayer(Dot11): return None
     d = p[Dot11]
-    rssi = getattr(p[RadioTap], "dBm_AntSignal", None) if p.haslayer(RadioTap) else None
-    return dict(t=float(p.time), ta=d.addr2, ra=d.addr1, type=d.type, subtype=d.subtype,
-                rssi=np.nan if rssi is None else rssi, len=len(p))
+    if d.type != 0 or not d.addr2 or d.subtype not in ASSOC | DISASSOC: return None
+    return dict(t=float(p.time), dev=d.addr2, dis=int(d.subtype in DISASSOC))
 
 def live_frames(iface, stop):
     q = queue.Queue()

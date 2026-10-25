@@ -1,0 +1,90 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Wi-Fi Intrusion Detector</title>
+<style>
+:root{--bg:#f1f5f9;--card:#fff;--tx:#0f172a;--mu:#64748b;--bd:#e2e8f0;--ok:#16a34a;--bad:#dc2626;--bl:#2563eb;--wa:#d97706}
+@media(prefers-color-scheme:dark){:root{--bg:#0b1220;--card:#162033;--tx:#e5eaf3;--mu:#94a3b8;--bd:#2a3850}}
+*{box-sizing:border-box}body{margin:0;font-family:system-ui,Segoe UI,sans-serif;background:var(--bg);color:var(--tx)}
+.wrap{max-width:1150px;margin:auto;padding:18px}h1{font-size:20px;margin:0}.sub{color:var(--mu);font-size:13px;margin:2px 0 14px}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:16px;margin-bottom:14px}
+h2{font-size:14px;margin:0 0 4px;text-transform:uppercase;letter-spacing:.04em}.hint{color:var(--mu);font-size:12.5px;margin:0 0 10px}
+#banner{border-radius:12px;padding:18px 20px;margin-bottom:14px;color:#fff;background:#64748b;display:flex;gap:14px;align-items:center}
+#banner .big{font-size:22px;font-weight:700}#banner .sm{font-size:13.5px;opacity:.95}#banner.ok{background:var(--ok)}#banner.bad{background:var(--bad);animation:p 1s infinite}
+@keyframes p{50%{opacity:.82}}#ic{font-size:34px}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+select,input,button{padding:8px 11px;border-radius:8px;border:1px solid var(--bd);background:var(--card);color:var(--tx);font-size:14px}
+button{background:var(--bl);color:#fff;border:0;cursor:pointer;font-weight:600}button.g{background:#64748b}
+.steps{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px}.steps div{flex:1;min-width:180px;font-size:13px;background:var(--bg);padding:8px 10px;border-radius:8px}
+.steps b{color:var(--bl)}
+.tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:14px}@media(max-width:800px){.tiles{grid-template-columns:1fr 1fr}}
+.tile{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:12px 14px}.tile .n{font-size:26px;font-weight:700}.tile .l{font-size:12px;color:var(--mu)}
+.two{display:grid;grid-template-columns:3fr 2fr;gap:14px}@media(max-width:900px){.two{grid-template-columns:1fr}}
+canvas{width:100%;height:240px;display:block}.lg{font-size:12.5px;color:var(--mu);margin-top:6px}.lg i{display:inline-block;width:12px;height:3px;margin:0 4px 2px 10px}
+table{width:100%;border-collapse:collapse;font-size:13px}th{color:var(--mu);text-align:left;font-weight:600}td,th{padding:6px 8px;border-bottom:1px solid var(--bd)}
+.pill{background:var(--bad);color:#fff;border-radius:99px;padding:2px 9px;font-size:11.5px}
+.cm{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:8px 0}.cm div{padding:10px;border-radius:8px;text-align:center;font-size:12px}
+.cm b{display:block;font-size:24px}.good{background:#16a34a22;border:1px solid var(--ok)}.err{background:#dc262622;border:1px solid var(--bad)}
+.bar{height:8px;background:var(--bd);border-radius:6px;margin:2px 0 8px}.bar span{display:block;height:100%;background:var(--bl);border-radius:6px}
+details{font-size:13px;color:var(--mu)}summary{cursor:pointer;color:var(--tx);font-weight:600}.empty{color:var(--mu);padding:14px 0;font-size:13px}
+</style></head><body><div class="wrap">
+<h1>Wi-Fi Intrusion Detector</h1><div class="sub">Watches Wi-Fi traffic and uses a Random Forest model to spot deauthentication flood attacks. Runs entirely on this computer.</div>
+
+<div id="banner"><div id="ic">&#9679;</div><div><div class="big" id="bt">Not monitoring</div><div class="sm" id="bs">Choose a traffic source below and press Start.</div></div></div>
+
+<div class="card"><h2>1 &middot; Choose traffic to monitor</h2>
+<div class="steps"><div><b>Step 1</b> Pick a recorded capture (pcap) to replay, or a live monitor-mode interface.</div><div><b>Step 2</b> Press <b>Start</b>.</div><div><b>Step 3</b> Watch the banner, chart and alert list.</div></div>
+<div class="row">
+ <select id="mode" onchange="fillSrc()"><option value="pcap">Replay a recorded capture (pcap)</option><option value="live">Live capture (monitor mode)</option></select>
+ <input id="src" list="opts" size="32" placeholder="pick or type a file / interface"><datalist id="opts"></datalist>
+ <label class="hint" style="margin:0">Replay speed <input id="speed" type="number" value="5" min="1" style="width:60px">x</label>
+ <button onclick="go()">&#9654; Start</button><button class="g" onclick="fetch('/api/stop',{method:'POST'})">&#9632; Stop</button></div>
+<div id="err" style="color:var(--bad);font-size:13px;margin-top:8px"></div></div>
+
+<div class="tiles">
+ <div class="tile"><div class="n" id="t1">0</div><div class="l">Association events analysed</div></div>
+ <div class="tile"><div class="n" id="t2">0</div><div class="l">Disassoc/deauth events (last second)</div></div>
+ <div class="tile"><div class="n" id="t3" style="color:var(--bad)">0</div><div class="l">Alerts raised</div></div>
+ <div class="tile"><div class="n" id="t4" style="font-size:15px;padding-top:9px">&mdash;</div><div class="l">Most recent suspect device</div></div></div>
+
+<div class="two"><div>
+ <div class="card"><h2>2 &middot; Traffic over time</h2><p class="hint">A normal device associates or disconnects about once every 100 seconds. A burst of hundreds of events in a second means someone is flooding the network to kick devices off.</p>
+  <canvas id="c" width="900" height="240"></canvas>
+  <div class="lg"><i style="background:#2563eb"></i>Association events per second<i style="background:#dc2626"></i>Disassociation/deauth per second<i style="background:#dc262633;height:10px"></i>Attack detected</div></div>
+ <div class="card"><h2>3 &middot; Alerts</h2><p class="hint">Each row is one second in which the model judged a device malicious. Also saved to <code>alerts.csv</code>.</p>
+  <table><thead><tr><th>Time</th><th>Device (MAC)</th><th>Attack</th><th>Disassoc/deauth</th><th>Model confidence</th></tr></thead><tbody id="al"></tbody></table><div id="noal" class="empty">No alerts yet.</div></div>
+</div><div>
+ <div class="card"><h2>How accurate is the model?</h2><p class="hint">Measured on traffic the model never saw during training.</p>
+  <div style="font-size:30px;font-weight:700" id="acc">&mdash;</div><div class="hint">overall accuracy</div>
+  <div class="cm"><div class="good"><b id="m00">-</b>Normal, correctly ignored</div><div class="err"><b id="m01">-</b>False alarms</div>
+  <div class="err"><b id="m10">-</b>Missed attacks</div><div class="good"><b id="m11">-</b>Attacks caught</div></div>
+  <div class="hint">Attack recall (caught / all attacks): <b id="rec">-</b><br>Precision (alerts that were real): <b id="pre">-</b></div></div>
+ <div class="card"><h2>What the model looks at</h2><p class="hint">Longer bar = that feature mattered more.</p><div id="imp"></div>
+  <details><summary>What do these mean?</summary><p>n_events / n_dis: association and disassociation events from one device in one second. dis_ratio: share that are disassociations. min_gap: shortest time between two events (attacks are milliseconds apart). n_10s / n_60s: events from that device in the last 10 / 60 seconds. gap_prev: seconds since its previous event (normal devices wait long; attackers don't).</p></details></div>
+</div></div></div>
+<script>
+const $=i=>document.getElementById(i);let S={interfaces:[],pcaps:[]};
+fetch('/api/sources').then(r=>r.json()).then(s=>{S=s;fillSrc()});
+function fillSrc(){const l=$('mode').value=='live'?S.interfaces:S.pcaps;$('opts').innerHTML=l.map(x=>`<option value="${x}">`).join('');
+ $('src').placeholder=$('mode').value=='live'?'e.g. wlan0 (must be in monitor mode)':'e.g. deauth_test.pcap';$('speed').disabled=$('mode').value=='live'}
+function go(){$('err').textContent='';fetch('/api/start',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({mode:$('mode').value,source:$('src').value,speed:$('speed').value})})}
+fetch('/api/metrics').then(r=>r.json()).then(m=>{if(!m.accuracy)return;const c=m.confusion_matrix;
+ $('acc').textContent=(m.accuracy*100).toFixed(2)+'%';$('m00').textContent=c[0][0];$('m01').textContent=c[0][1];$('m10').textContent=c[1][0];$('m11').textContent=c[1][1];
+ const p=(a,b)=>b?(100*a/b).toFixed(1)+'%':'n/a';$('rec').textContent=p(c[1][1],c[1][0]+c[1][1]);$('pre').textContent=p(c[1][1],c[1][1]+c[0][1]);
+ const e=Object.entries(m.importances).sort((a,b)=>b[1]-a[1]);const mx=e[0][1]||1;
+ $('imp').innerHTML=e.map(([k,v])=>`<div style="font-size:12.5px">${k} <span style="float:right;color:var(--mu)">${(v*100).toFixed(1)}%</span></div><div class="bar"><span style="width:${v/mx*100}%"></span></div>`).join('')});
+function draw(h){const cv=$('c'),x=cv.getContext('2d'),W=cv.width,H=cv.height,L=40,B=20;x.clearRect(0,0,W,H);
+ const st=getComputedStyle(document.body).getPropertyValue('--mu');x.fillStyle=st;x.font='12px sans-serif';
+ if(!h.length){x.fillText('Waiting for traffic...',L+10,H/2);return}
+ const mx=Math.max(5,...h.map(p=>p.frames)),n=h.length,X=i=>L+i*(W-L-8)/Math.max(n-1,1),Y=v=>H-B-v/mx*(H-B-10);
+ x.strokeStyle='#8884';for(let k=0;k<=4;k++){const v=mx*k/4;x.beginPath();x.moveTo(L,Y(v));x.lineTo(W,Y(v));x.stroke();x.fillText(Math.round(v),4,Y(v)+4)}
+ h.forEach((p,i)=>{if(p.alert){x.fillStyle='#dc262633';x.fillRect(X(i)-4,0,8,H-B)}});
+ [['frames','#2563eb'],['deauth','#dc2626']].forEach(([k,c])=>{x.beginPath();x.strokeStyle=c;x.lineWidth=2;h.forEach((p,i)=>i?x.lineTo(X(i),Y(p[k])):x.moveTo(X(i),Y(p[k])));x.stroke()});
+ x.fillStyle=st;x.fillText('older',L,H-5);x.fillText('now',W-30,H-5)}
+async function tick(){const s=await (await fetch('/api/state')).json(),h=s.history,last=h[h.length-1],att=last&&last.alert,b=$('banner');
+ if(att){b.className='bad';$('ic').textContent='\u26A0';$('bt').textContent='ATTACK DETECTED: deauthentication flood';$('bs').textContent='Device '+(s.alerts[0]?s.alerts[0].mac:'?')+' is sending large numbers of deauth frames to disconnect other devices.'}
+ else if(s.running){b.className='ok';$('ic').textContent='\u2714';$('bt').textContent='All clear';$('bs').textContent='Monitoring traffic. No attack in the last second.'}
+ else{b.className='';$('ic').textContent='\u25CF';$('bt').textContent=s.total?'Finished':'Not monitoring';$('bs').textContent=s.total?'Capture ended. Review the alerts below.':'Choose a traffic source above and press Start.'}
+ $('err').textContent=s.error||'';$('t1').textContent=s.total.toLocaleString();$('t2').textContent=last?last.deauth:0;$('t3').textContent=s.alerts.length;$('t4').textContent=s.alerts[0]?s.alerts[0].mac:'\u2014';
+ draw(h);$('noal').style.display=s.alerts.length?'none':'block';
+ $('al').innerHTML=s.alerts.map(a=>`<tr><td>${a.time}</td><td>${a.mac}</td><td><span class="pill">${a.type}</span></td><td>${a.deauth}/s</td><td>${(a.conf*100).toFixed(0)}%</td></tr>`).join('')}
+setInterval(tick,1000);tick();
+</script></body></html>

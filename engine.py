@@ -1,6 +1,6 @@
 """Detection engine: 1-second windows -> features -> model -> alerts (logged to alerts.csv)."""
 import csv, os, threading, time, joblib, pandas as pd
-from features import window_features, FEATS
+from features import window_features, FEATS, CAP
 from capture import live_frames, pcap_frames
 
 class Engine:
@@ -23,7 +23,7 @@ class Engine:
     def _run(self, mode, src, speed):
         try:
             frames = live_frames(src, self.stop_evt) if mode == "live" else pcap_frames(src, self.stop_evt, speed)
-            buf, ws = [], None
+            buf, ws, self.recent = [], None, []
             for f in frames:
                 if ws is None: ws = int(f["t"])
                 if f["t"] >= ws + 1: self._flush(buf, ws); buf, ws = [], int(f["t"])
@@ -33,15 +33,18 @@ class Engine:
         self.running = False
 
     def _flush(self, buf, ws):
-        df = pd.DataFrame(buf); W = window_features(df)
+        """Score one second of events, using the last 60 s of history for context."""
+        self.recent = [r for r in self.recent if r["t"] > ws + 1 - CAP] + buf
+        W = window_features(pd.DataFrame(self.recent))
+        W = W[W.w == ws]
         if W.empty: return
-        W["pred"] = self.model.predict(W[FEATS]); W["conf"] = self.model.predict_proba(W[FEATS])[:, 1]
+        W = W.assign(pred=self.model.predict(W[FEATS]), conf=self.model.predict_proba(W[FEATS])[:, 1])
         self.total += len(buf)
-        self.history.append(dict(t=ws, frames=len(buf), deauth=int(W.n_deauth.sum()), alert=int(W.pred.sum() > 0)))
+        self.history.append(dict(t=ws, frames=len(buf), deauth=int(sum(r["dis"] for r in buf)), alert=int(W.pred.sum() > 0)))
         self.history = self.history[-120:]
         for _, r in W[W.pred == 1].iterrows():
-            a = dict(time=time.strftime("%H:%M:%S"), mac=r.ta, type="Deauth flood", deauth=int(r.n_deauth),
-                     frames=int(r.n_frames), conf=round(float(r.conf), 3))
+            a = dict(time=time.strftime("%H:%M:%S"), mac=r.dev, type="Deauth/disassoc flood", deauth=int(r.n_dis),
+                     frames=int(r.n_events), conf=round(float(r.conf), 3))
             self.alerts.insert(0, a); self.alerts = self.alerts[:200]
             new = not os.path.exists("alerts.csv")
             with open("alerts.csv", "a", newline="") as f:

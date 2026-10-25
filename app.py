@@ -21,4 +21,10 @@ def start():
 @app.route("/api/stop", methods=["POST"])
 def stop(): eng.stop(); return jsonify(ok=True)
 
+@app.route("/api/sources")
+def sources():
+    ifs = sorted(os.listdir("/sys/class/net")) if os.path.isdir("/sys/class/net") else []
+    pc = sorted(f for f in os.listdir(".") if f.endswith((".pcap", ".pcapng", ".cap")))
+    return jsonify(interfaces=ifs, pcaps=pc)
+
 if __name__ == "__main__": app.run(host="127.0.0.1", port=5000)
