@@ -1,7 +1,7 @@
 """Detection engine: 1-second windows -> features -> model -> alerts (logged to alerts.csv)."""
 import csv, os, threading, time, joblib, pandas as pd
 from features import window_features, FEATS, CAP
-from capture import live_frames, pcap_frames
+from capture import live_frames, pcap_frames, csv_frames
 
 class Engine:
     def __init__(self, model_path="model.joblib"):
@@ -22,7 +22,7 @@ class Engine:
 
     def _run(self, mode, src, speed):
         try:
-            frames = live_frames(src, self.stop_evt) if mode == "live" else pcap_frames(src, self.stop_evt, speed)
+            frames = live_frames(src, self.stop_evt) if mode == "live" else (csv_frames if str(src).endswith('.csv') else pcap_frames)(src, self.stop_evt, speed)
             buf, ws, self.recent = [], None, []
             for f in frames:
                 if ws is None: ws = int(f["t"])

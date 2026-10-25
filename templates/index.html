@@ -1,90 +1,138 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Wi-Fi Intrusion Detector</title>
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1"><title>WIDS Console</title>
 <style>
-:root{--bg:#f1f5f9;--card:#fff;--tx:#0f172a;--mu:#64748b;--bd:#e2e8f0;--ok:#16a34a;--bad:#dc2626;--bl:#2563eb;--wa:#d97706}
-@media(prefers-color-scheme:dark){:root{--bg:#0b1220;--card:#162033;--tx:#e5eaf3;--mu:#94a3b8;--bd:#2a3850}}
-*{box-sizing:border-box}body{margin:0;font-family:system-ui,Segoe UI,sans-serif;background:var(--bg);color:var(--tx)}
-.wrap{max-width:1150px;margin:auto;padding:18px}h1{font-size:20px;margin:0}.sub{color:var(--mu);font-size:13px;margin:2px 0 14px}
-.card{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:16px;margin-bottom:14px}
-h2{font-size:14px;margin:0 0 4px;text-transform:uppercase;letter-spacing:.04em}.hint{color:var(--mu);font-size:12.5px;margin:0 0 10px}
-#banner{border-radius:12px;padding:18px 20px;margin-bottom:14px;color:#fff;background:#64748b;display:flex;gap:14px;align-items:center}
-#banner .big{font-size:22px;font-weight:700}#banner .sm{font-size:13.5px;opacity:.95}#banner.ok{background:var(--ok)}#banner.bad{background:var(--bad);animation:p 1s infinite}
-@keyframes p{50%{opacity:.82}}#ic{font-size:34px}
-.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
-select,input,button{padding:8px 11px;border-radius:8px;border:1px solid var(--bd);background:var(--card);color:var(--tx);font-size:14px}
-button{background:var(--bl);color:#fff;border:0;cursor:pointer;font-weight:600}button.g{background:#64748b}
-.steps{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px}.steps div{flex:1;min-width:180px;font-size:13px;background:var(--bg);padding:8px 10px;border-radius:8px}
-.steps b{color:var(--bl)}
-.tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:14px}@media(max-width:800px){.tiles{grid-template-columns:1fr 1fr}}
-.tile{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:12px 14px}.tile .n{font-size:26px;font-weight:700}.tile .l{font-size:12px;color:var(--mu)}
-.two{display:grid;grid-template-columns:3fr 2fr;gap:14px}@media(max-width:900px){.two{grid-template-columns:1fr}}
-canvas{width:100%;height:240px;display:block}.lg{font-size:12.5px;color:var(--mu);margin-top:6px}.lg i{display:inline-block;width:12px;height:3px;margin:0 4px 2px 10px}
-table{width:100%;border-collapse:collapse;font-size:13px}th{color:var(--mu);text-align:left;font-weight:600}td,th{padding:6px 8px;border-bottom:1px solid var(--bd)}
-.pill{background:var(--bad);color:#fff;border-radius:99px;padding:2px 9px;font-size:11.5px}
-.cm{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:8px 0}.cm div{padding:10px;border-radius:8px;text-align:center;font-size:12px}
-.cm b{display:block;font-size:24px}.good{background:#16a34a22;border:1px solid var(--ok)}.err{background:#dc262622;border:1px solid var(--bad)}
-.bar{height:8px;background:var(--bd);border-radius:6px;margin:2px 0 8px}.bar span{display:block;height:100%;background:var(--bl);border-radius:6px}
-details{font-size:13px;color:var(--mu)}summary{cursor:pointer;color:var(--tx);font-weight:600}.empty{color:var(--mu);padding:14px 0;font-size:13px}
-</style></head><body><div class="wrap">
-<h1>Wi-Fi Intrusion Detector</h1><div class="sub">Watches Wi-Fi traffic and uses a Random Forest model to spot deauthentication flood attacks. Runs entirely on this computer.</div>
-
-<div id="banner"><div id="ic">&#9679;</div><div><div class="big" id="bt">Not monitoring</div><div class="sm" id="bs">Choose a traffic source below and press Start.</div></div></div>
-
-<div class="card"><h2>1 &middot; Choose traffic to monitor</h2>
-<div class="steps"><div><b>Step 1</b> Pick a recorded capture (pcap) to replay, or a live monitor-mode interface.</div><div><b>Step 2</b> Press <b>Start</b>.</div><div><b>Step 3</b> Watch the banner, chart and alert list.</div></div>
-<div class="row">
- <select id="mode" onchange="fillSrc()"><option value="pcap">Replay a recorded capture (pcap)</option><option value="live">Live capture (monitor mode)</option></select>
- <input id="src" list="opts" size="32" placeholder="pick or type a file / interface"><datalist id="opts"></datalist>
- <label class="hint" style="margin:0">Replay speed <input id="speed" type="number" value="5" min="1" style="width:60px">x</label>
- <button onclick="go()">&#9654; Start</button><button class="g" onclick="fetch('/api/stop',{method:'POST'})">&#9632; Stop</button></div>
-<div id="err" style="color:var(--bad);font-size:13px;margin-top:8px"></div></div>
-
-<div class="tiles">
- <div class="tile"><div class="n" id="t1">0</div><div class="l">Association events analysed</div></div>
- <div class="tile"><div class="n" id="t2">0</div><div class="l">Disassoc/deauth events (last second)</div></div>
- <div class="tile"><div class="n" id="t3" style="color:var(--bad)">0</div><div class="l">Alerts raised</div></div>
- <div class="tile"><div class="n" id="t4" style="font-size:15px;padding-top:9px">&mdash;</div><div class="l">Most recent suspect device</div></div></div>
-
-<div class="two"><div>
- <div class="card"><h2>2 &middot; Traffic over time</h2><p class="hint">A normal device associates or disconnects about once every 100 seconds. A burst of hundreds of events in a second means someone is flooding the network to kick devices off.</p>
-  <canvas id="c" width="900" height="240"></canvas>
-  <div class="lg"><i style="background:#2563eb"></i>Association events per second<i style="background:#dc2626"></i>Disassociation/deauth per second<i style="background:#dc262633;height:10px"></i>Attack detected</div></div>
- <div class="card"><h2>3 &middot; Alerts</h2><p class="hint">Each row is one second in which the model judged a device malicious. Also saved to <code>alerts.csv</code>.</p>
-  <table><thead><tr><th>Time</th><th>Device (MAC)</th><th>Attack</th><th>Disassoc/deauth</th><th>Model confidence</th></tr></thead><tbody id="al"></tbody></table><div id="noal" class="empty">No alerts yet.</div></div>
-</div><div>
- <div class="card"><h2>How accurate is the model?</h2><p class="hint">Measured on traffic the model never saw during training.</p>
-  <div style="font-size:30px;font-weight:700" id="acc">&mdash;</div><div class="hint">overall accuracy</div>
-  <div class="cm"><div class="good"><b id="m00">-</b>Normal, correctly ignored</div><div class="err"><b id="m01">-</b>False alarms</div>
-  <div class="err"><b id="m10">-</b>Missed attacks</div><div class="good"><b id="m11">-</b>Attacks caught</div></div>
-  <div class="hint">Attack recall (caught / all attacks): <b id="rec">-</b><br>Precision (alerts that were real): <b id="pre">-</b></div></div>
- <div class="card"><h2>What the model looks at</h2><p class="hint">Longer bar = that feature mattered more.</p><div id="imp"></div>
-  <details><summary>What do these mean?</summary><p>n_events / n_dis: association and disassociation events from one device in one second. dis_ratio: share that are disassociations. min_gap: shortest time between two events (attacks are milliseconds apart). n_10s / n_60s: events from that device in the last 10 / 60 seconds. gap_prev: seconds since its previous event (normal devices wait long; attackers don't).</p></details></div>
-</div></div></div>
+:root{color-scheme:dark;--bg:#0d1218;--rail:#10171f;--panel:#151d27;--head:#19232f;--line:#243142;--tx:#d6dee8;--mu:#8596aa;--acc:#4c8dff;--ok:#2fbf71;--warn:#f0a63a;--crit:#f05252;--okb:#12392a;--critb:#451d22;--warnb:#443212}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--tx);font:14px/1.45 "Segoe UI Variable Text","SF Pro Text",system-ui,sans-serif;display:grid;grid-template-columns:208px 1fr;min-height:100vh}
+.mono,td.m,.kpi b{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-variant-numeric:tabular-nums}
+:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+nav{background:var(--rail);border-right:1px solid var(--line);padding:16px 10px;position:sticky;top:0;height:100vh}
+.brand{display:flex;gap:10px;align-items:center;padding:4px 8px 18px;font-weight:700;font-size:15px}
+.logo{width:28px;height:28px;border-radius:7px;background:var(--acc);display:grid;place-items:center}
+nav a{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:7px;color:var(--mu);text-decoration:none;margin-bottom:2px}
+nav a:hover{background:var(--head);color:var(--tx)}nav a[aria-current=page]{background:var(--head);color:var(--tx);box-shadow:inset 3px 0 var(--acc)}
+nav svg{width:17px;height:17px;flex:none}
+.side-foot{position:absolute;bottom:14px;left:18px;right:14px;font-size:12px;color:var(--mu)}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--mu);margin-right:6px}
+.top{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;padding:10px 20px;background:var(--rail);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:5}
+.top h1{font-size:16px;margin:0 auto 0 0;font-weight:600}
+.pill{display:inline-flex;align-items:center;gap:7px;padding:4px 11px;border-radius:99px;font-size:12.5px;font-weight:600;background:var(--head);color:var(--mu)}
+.pill.ok{background:var(--okb);color:var(--ok)}.pill.bad{background:var(--critb);color:var(--crit)}
+.pill.ok .dot{background:var(--ok)}.pill.bad .dot{background:var(--crit);animation:bl 1s infinite}@keyframes bl{50%{opacity:.25}}
+.src{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+select,input[type=text]{height:34px;padding:0 10px;background:var(--bg);color:var(--tx);border:1px solid var(--line);border-radius:6px;font:inherit}input[type=text]{width:230px}
+button{height:34px;padding:0 14px;border-radius:6px;border:1px solid var(--line);background:var(--head);color:var(--tx);font:inherit;font-weight:600;cursor:pointer}
+button.pri{background:var(--acc);border-color:var(--acc);color:#fff}button.stop{background:var(--crit);border-color:var(--crit);color:#fff}
+#msg{width:100%;color:var(--crit);font-size:12.5px;display:none}
+main{padding:18px 20px 40px}.view{display:none}.view.on{display:block}
+.kpis{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin-bottom:14px}@media(max-width:1200px){.kpis{grid-template-columns:repeat(3,1fr)}}
+.kpi{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:12px 14px;border-top:3px solid var(--line)}
+.kpi span{color:var(--mu);font-size:12px}.kpi b{display:block;font-size:26px;font-weight:600;margin-top:2px}
+.kpi.ok{border-top-color:var(--ok)}.kpi.bad{border-top-color:var(--crit)}.kpi.bad b{color:var(--crit)}.kpi.ok b{color:var(--ok)}
+.grid{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr);gap:14px}@media(max-width:1100px){.grid{grid-template-columns:1fr}}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:8px;margin-bottom:14px;overflow:hidden}
+.ph{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:9px 14px;background:var(--head);border-bottom:1px solid var(--line);font-weight:600;font-size:13px}
+.ph small{color:var(--mu);font-weight:400}.pb{padding:12px 14px}
+.chartbox{position:relative}canvas{width:100%;height:260px;display:block}#tip{position:absolute;display:none;pointer-events:none;background:#0a0e13;border:1px solid var(--line);padding:7px 10px;border-radius:6px;font-size:12px;top:8px;white-space:nowrap}
+.lg{display:flex;gap:16px;font-size:12px;color:var(--mu);padding:0 14px 10px}.lg i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px}
+.tw{overflow:auto;max-height:420px}table{width:100%;border-collapse:collapse;font-size:13px}
+th{position:sticky;top:0;background:var(--head);color:var(--mu);font-weight:600;text-align:left;font-size:12px}th,td{padding:8px 14px;border-bottom:1px solid var(--line);white-space:nowrap}
+tr:hover td{background:#1a2430}.sev{padding:2px 8px;border-radius:4px;font-size:11.5px;font-weight:700}
+.sev.c{background:var(--critb);color:var(--crit)}.sev.h{background:var(--warnb);color:var(--warn)}.sev.m{background:var(--head);color:var(--mu)}
+.empty{padding:26px 14px;color:var(--mu);text-align:center}
+.bars div{display:grid;grid-template-columns:150px 1fr 40px;gap:10px;align-items:center;margin:8px 0;font-size:12.5px}.bars .t{height:8px;background:var(--bg);border-radius:4px}.bars .t i{display:block;height:100%;border-radius:4px;background:var(--acc)}
+.cm{display:grid;grid-template-columns:90px 1fr 1fr;gap:6px;text-align:center;font-size:12px}.cm .h{color:var(--mu);align-self:center}.cell{padding:14px 8px;border-radius:6px}.cell b{display:block;font-size:24px}
+.g{background:var(--okb);color:var(--ok)}.r{background:var(--critb);color:var(--crit)}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:14px}@media(max-width:1100px){.row2{grid-template-columns:1fr}}
+@media(max-width:800px){body{grid-template-columns:1fr}nav{display:none}}
+@media(prefers-reduced-motion:reduce){*{animation:none!important}}
+</style></head><body>
+<nav aria-label="Main"><div class="brand"><span class="logo"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round"><path d="M2 9a15 15 0 0 1 20 0M5 13a10 10 0 0 1 14 0M8.5 16.5a5 5 0 0 1 7 0"/><circle cx="12" cy="20" r="1" fill="#fff"/></svg></span>WIDS Console</div>
+ <a href="#overview" data-v="overview"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h4l3-8 4 16 3-8h4"/></svg>Overview</a>
+ <a href="#alerts" data-v="alerts"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3 2 21h20zM12 10v5M12 18h.01"/></svg>Alerts</a>
+ <a href="#model" data-v="model"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>Model</a>
+ <div class="side-foot"><span class="dot" id="sdot"></span><span id="sside">Idle</span><br>Random Forest, runs locally</div></nav>
+<div>
+<div class="top"><h1 id="title">Overview</h1><span class="pill" id="pill"><span class="dot"></span><span id="ptxt">Idle</span></span>
+ <form class="src" onsubmit="event.preventDefault();toggle()" aria-label="Data source">
+  <select id="mode" onchange="fill()" aria-label="Source type"><option value="pcap">PCAP replay</option><option value="live">Live capture</option></select>
+  <input type="text" id="src" list="opts" aria-label="File or interface" autocomplete="off"><datalist id="opts"></datalist>
+  <select id="speed" aria-label="Replay speed"><option value="1">1x</option><option value="5" selected>5x</option><option value="20">20x</option></select>
+  <button class="pri" id="go">Start</button></form><div id="msg" role="alert"></div></div>
+<main>
+<section class="view" id="v-overview">
+ <div class="kpis">
+  <div class="kpi" id="k0"><span>Threat status</span><b id="kv0">Idle</b></div>
+  <div class="kpi"><span>Events/s</span><b id="kv1">0</b></div>
+  <div class="kpi"><span>Disconnects/s</span><b id="kv2">0</b></div>
+  <div class="kpi" id="k3"><span>Active incidents</span><b id="kv3">0</b></div>
+  <div class="kpi"><span>Total alerts</span><b id="kv4">0</b></div>
+  <div class="kpi"><span>Events analysed</span><b id="kv5">0</b></div></div>
+ <div class="grid"><div>
+  <div class="panel"><div class="ph">Association and disconnect events <small>last 2 minutes, 1 s resolution</small></div>
+   <div class="chartbox"><canvas id="c" role="img" aria-label="Event rate over time"></canvas><div id="tip"></div></div>
+   <div class="lg"><span><i style="background:var(--acc)"></i>All events</span><span><i style="background:var(--crit)"></i>Disconnect / deauth</span><span><i style="background:#f0525233"></i>Alert active</span></div></div>
+  <div class="panel"><div class="ph">Latest alerts <small><a href="#alerts" style="color:var(--acc)">View all</a></small></div><div class="tw" style="max-height:260px"><table><tbody id="recent"></tbody></table></div></div></div>
+ <div>
+  <div class="panel"><div class="ph">Top suspect devices <small>by alerts</small></div><div class="pb bars" id="top"><div class="empty">No suspect devices.</div></div></div>
+  <div class="panel"><div class="ph">Detection model</div><div class="pb"><div style="font-size:12px;color:var(--mu)">Test accuracy</div><div class="mono" style="font-size:30px" id="acc2">--</div><div style="color:var(--mu);font-size:12.5px;margin-top:6px">Random Forest on per-device event timing. Details in the Model view.</div></div></div></div></div>
+</section>
+<section class="view" id="v-alerts">
+ <div class="panel"><div class="ph">Alert log <span><button onclick="csv()">Export CSV</button></span></div><div class="tw" style="max-height:none"><table><thead><tr><th>Time</th><th>Severity</th><th>Device (MAC)</th><th>Type</th><th>Disconnects/s</th><th>Events/s</th><th>Confidence</th></tr></thead><tbody id="all"></tbody></table><div id="noal" class="empty">No alerts. Start a monitoring session to see detections here. Alerts are also saved to alerts.csv.</div></div></div>
+</section>
+<section class="view" id="v-model">
+ <div class="row2"><div class="panel"><div class="ph">Confusion matrix <small>held-out test set</small></div><div class="pb">
+  <div class="mono" style="font-size:34px" id="acc">--</div><div style="color:var(--mu);margin-bottom:12px">accuracy</div>
+  <div class="cm"><div></div><div class="h">Predicted normal</div><div class="h">Predicted attack</div>
+   <div class="h">Actual normal</div><div class="cell g"><b class="mono" id="m00">-</b>True negative</div><div class="cell r"><b class="mono" id="m01">-</b>False alarm</div>
+   <div class="h">Actual attack</div><div class="cell r"><b class="mono" id="m10">-</b>Missed attack</div><div class="cell g"><b class="mono" id="m11">-</b>True positive</div></div>
+  <div class="bars" style="margin-top:14px"><div><span>Recall</span><span class="t"><i id="recb" style="width:0"></i></span><b class="mono" id="rec">-</b></div><div><span>Precision</span><span class="t"><i id="preb" style="width:0"></i></span><b class="mono" id="pre">-</b></div></div></div></div>
+ <div class="panel"><div class="ph">Feature importance</div><div class="pb bars" id="imp"></div></div></div>
+</section></main></div>
 <script>
-const $=i=>document.getElementById(i);let S={interfaces:[],pcaps:[]};
-fetch('/api/sources').then(r=>r.json()).then(s=>{S=s;fillSrc()});
-function fillSrc(){const l=$('mode').value=='live'?S.interfaces:S.pcaps;$('opts').innerHTML=l.map(x=>`<option value="${x}">`).join('');
- $('src').placeholder=$('mode').value=='live'?'e.g. wlan0 (must be in monitor mode)':'e.g. deauth_test.pcap';$('speed').disabled=$('mode').value=='live'}
-function go(){$('err').textContent='';fetch('/api/start',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({mode:$('mode').value,source:$('src').value,speed:$('speed').value})})}
-fetch('/api/metrics').then(r=>r.json()).then(m=>{if(!m.accuracy)return;const c=m.confusion_matrix;
- $('acc').textContent=(m.accuracy*100).toFixed(2)+'%';$('m00').textContent=c[0][0];$('m01').textContent=c[0][1];$('m10').textContent=c[1][0];$('m11').textContent=c[1][1];
- const p=(a,b)=>b?(100*a/b).toFixed(1)+'%':'n/a';$('rec').textContent=p(c[1][1],c[1][0]+c[1][1]);$('pre').textContent=p(c[1][1],c[1][1]+c[0][1]);
- const e=Object.entries(m.importances).sort((a,b)=>b[1]-a[1]);const mx=e[0][1]||1;
- $('imp').innerHTML=e.map(([k,v])=>`<div style="font-size:12.5px">${k} <span style="float:right;color:var(--mu)">${(v*100).toFixed(1)}%</span></div><div class="bar"><span style="width:${v/mx*100}%"></span></div>`).join('')});
-function draw(h){const cv=$('c'),x=cv.getContext('2d'),W=cv.width,H=cv.height,L=40,B=20;x.clearRect(0,0,W,H);
- const st=getComputedStyle(document.body).getPropertyValue('--mu');x.fillStyle=st;x.font='12px sans-serif';
- if(!h.length){x.fillText('Waiting for traffic...',L+10,H/2);return}
- const mx=Math.max(5,...h.map(p=>p.frames)),n=h.length,X=i=>L+i*(W-L-8)/Math.max(n-1,1),Y=v=>H-B-v/mx*(H-B-10);
- x.strokeStyle='#8884';for(let k=0;k<=4;k++){const v=mx*k/4;x.beginPath();x.moveTo(L,Y(v));x.lineTo(W,Y(v));x.stroke();x.fillText(Math.round(v),4,Y(v)+4)}
- h.forEach((p,i)=>{if(p.alert){x.fillStyle='#dc262633';x.fillRect(X(i)-4,0,8,H-B)}});
- [['frames','#2563eb'],['deauth','#dc2626']].forEach(([k,c])=>{x.beginPath();x.strokeStyle=c;x.lineWidth=2;h.forEach((p,i)=>i?x.lineTo(X(i),Y(p[k])):x.moveTo(X(i),Y(p[k])));x.stroke()});
- x.fillStyle=st;x.fillText('older',L,H-5);x.fillText('now',W-30,H-5)}
-async function tick(){const s=await (await fetch('/api/state')).json(),h=s.history,last=h[h.length-1],att=last&&last.alert,b=$('banner');
- if(att){b.className='bad';$('ic').textContent='\u26A0';$('bt').textContent='ATTACK DETECTED: deauthentication flood';$('bs').textContent='Device '+(s.alerts[0]?s.alerts[0].mac:'?')+' is sending large numbers of deauth frames to disconnect other devices.'}
- else if(s.running){b.className='ok';$('ic').textContent='\u2714';$('bt').textContent='All clear';$('bs').textContent='Monitoring traffic. No attack in the last second.'}
- else{b.className='';$('ic').textContent='\u25CF';$('bt').textContent=s.total?'Finished':'Not monitoring';$('bs').textContent=s.total?'Capture ended. Review the alerts below.':'Choose a traffic source above and press Start.'}
- $('err').textContent=s.error||'';$('t1').textContent=s.total.toLocaleString();$('t2').textContent=last?last.deauth:0;$('t3').textContent=s.alerts.length;$('t4').textContent=s.alerts[0]?s.alerts[0].mac:'\u2014';
- draw(h);$('noal').style.display=s.alerts.length?'none':'block';
- $('al').innerHTML=s.alerts.map(a=>`<tr><td>${a.time}</td><td>${a.mac}</td><td><span class="pill">${a.type}</span></td><td>${a.deauth}/s</td><td>${(a.conf*100).toFixed(0)}%</td></tr>`).join('')}
-setInterval(tick,1000);tick();
+const $=i=>document.getElementById(i);let S={interfaces:[],pcaps:[]},run=false,H=[],AL=[],T0=0;
+const NAMES={n_events:"Events this second",n_dis:"Disconnects this second",dis_ratio:"Disconnect share",min_gap:"Shortest event gap",n_10s:"Events, last 10 s",n_60s:"Events, last 60 s",gap_prev:"Time since last event"};
+function view(){const v=(location.hash||'#overview').slice(1);document.querySelectorAll('.view').forEach(e=>e.classList.toggle('on',e.id=='v-'+v));
+ document.querySelectorAll('nav a').forEach(a=>{a.toggleAttribute('aria-current',a.dataset.v==v);if(a.dataset.v==v)a.setAttribute('aria-current','page')});$('title').textContent=v[0].toUpperCase()+v.slice(1);draw()}
+addEventListener('hashchange',view);
+fetch('/api/sources').then(r=>r.json()).then(s=>{S=s;fill()});
+function fill(){const l=$('mode').value=='live'?S.interfaces:S.pcaps;$('opts').innerHTML=l.map(x=>`<option value="${x}">`).join('');
+ $('src').placeholder=$('mode').value=='live'?'Interface, e.g. wlan0':'Capture file, e.g. test.pcap';$('speed').hidden=$('mode').value=='live'}
+function err(t){const m=$('msg');m.textContent=t;m.style.display=t?'block':'none'}
+function toggle(){err('');if(run){fetch('/api/stop',{method:'POST'});return}
+ if(!$('src').value.trim()){err($('mode').value=='live'?'Enter your monitor-mode interface, for example wlan0.':'Enter a capture file path, for example test.pcap.');$('src').focus();return}
+ fetch('/api/start',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({mode:$('mode').value,source:$('src').value.trim(),speed:$('speed').value})})}
+const pct=(a,b)=>b?a/b*100:0;
+fetch('/api/metrics').then(r=>r.json()).then(m=>{if(!m.accuracy)return;const c=m.confusion_matrix,f=n=>n.toLocaleString();
+ ['acc','acc2'].forEach(i=>$(i).textContent=(m.accuracy*100).toFixed(2)+'%');$('m00').textContent=f(c[0][0]);$('m01').textContent=f(c[0][1]);$('m10').textContent=f(c[1][0]);$('m11').textContent=f(c[1][1]);
+ const r=pct(c[1][1],c[1][0]+c[1][1]),p=pct(c[1][1],c[1][1]+c[0][1]);$('rec').textContent=r.toFixed(1)+'%';$('pre').textContent=p.toFixed(1)+'%';$('recb').style.width=r+'%';$('preb').style.width=p+'%';
+ const e=Object.entries(m.importances).sort((a,b)=>b[1]-a[1]),mx=e[0][1]||1;
+ $('imp').innerHTML=e.map(([k,v])=>`<div><span>${NAMES[k]||k}</span><span class="t"><i style="width:${v/mx*100}%"></i></span><b class="mono">${(v*100).toFixed(1)}%</b></div>`).join('')});
+const sev=c=>c>=.9?['c','Critical']:c>=.7?['h','High']:['m','Medium'];
+const row=a=>{const s=sev(a.conf);return `<tr><td class="m">${a.time}</td><td><span class="sev ${s[0]}">${s[1]}</span></td><td class="m">${a.mac}</td><td>${a.type}</td><td class="m">${a.deauth}</td><td class="m">${a.frames}</td><td class="m">${(a.conf*100).toFixed(0)}%</td></tr>`};
+function csv(){const t='time,mac,type,disconnects,events,confidence\n'+AL.map(a=>[a.time,a.mac,a.type,a.deauth,a.frames,a.conf].join(',')).join('\n');
+ const l=document.createElement('a');l.href=URL.createObjectURL(new Blob([t],{type:'text/csv'}));l.download='alerts_export.csv';l.click()}
+const css=v=>getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+function draw(){const cv=$('c');if(!cv||!cv.clientWidth)return;const d=devicePixelRatio||1,W=cv.clientWidth,Hh=cv.clientHeight;cv.width=W*d;cv.height=Hh*d;const x=cv.getContext('2d');x.scale(d,d);
+ x.font='11px system-ui';x.fillStyle=css('--mu');const L=36,B=20;if(!H.length){x.fillText('No data yet. Start a session to see live traffic.',L+8,Hh/2);return}
+ const mx=Math.max(5,...H.map(p=>p.frames)),n=H.length,X=i=>L+i*(W-L-6)/Math.max(n-1,1),Y=v=>Hh-B-v/mx*(Hh-B-10);
+ x.strokeStyle=css('--line');for(let k=0;k<=4;k++){const v=mx*k/4;x.beginPath();x.moveTo(L,Y(v));x.lineTo(W,Y(v));x.stroke();x.fillText(Math.round(v),4,Y(v)+4)}
+ const bw=Math.max(3,(W-L)/n);H.forEach((p,i)=>{if(p.alert){x.fillStyle='#f0525230';x.fillRect(X(i)-bw/2,0,bw,Hh-B)}});
+ const ln=(k,c,fl)=>{x.beginPath();H.forEach((p,i)=>i?x.lineTo(X(i),Y(p[k])):x.moveTo(X(i),Y(p[k])));x.strokeStyle=c;x.lineWidth=2;x.lineJoin='round';x.stroke();if(fl){x.lineTo(X(n-1),Y(0));x.lineTo(X(0),Y(0));x.globalAlpha=.14;x.fillStyle=c;x.fill();x.globalAlpha=1}};
+ ln('frames',css('--acc'),1);ln('deauth',css('--crit'),0);x.fillStyle=css('--mu');x.fillText('-2m',L,Hh-5);x.fillText('now',W-24,Hh-5)}
+$('c').addEventListener('mousemove',e=>{if(!H.length)return;const r=e.target.getBoundingClientRect(),i=Math.max(0,Math.min(H.length-1,Math.round((e.clientX-r.left-36)/(r.width-42)*(H.length-1)))),p=H[i],t=$('tip');
+ t.style.display='block';t.innerHTML=`<b class="mono">${new Date(p.t*1000).toLocaleTimeString()}</b><br>Events ${p.frames}, disconnects ${p.deauth}${p.alert?'<br><span style="color:var(--crit)">Attack flagged</span>':''}`;t.style.left=Math.min(e.clientX-r.left+12,r.width-150)+'px'});
+$('c').addEventListener('mouseleave',()=>$('tip').style.display='none');
+async function tick(){const s=await (await fetch('/api/state')).json();H=s.history;AL=s.alerts;if(s.running&&!run)T0=Date.now();run=s.running;
+ const last=H[H.length-1],att=last&&last.alert,devs={};AL.forEach(a=>devs[a.mac]=(devs[a.mac]||0)+1);
+ $('go').textContent=run?'Stop':'Start';$('go').className=run?'stop':'pri';if(s.error)err(s.error);
+ const st=att?'bad':run?'ok':'';$('pill').className='pill '+st;$('ptxt').textContent=att?'Attack detected':run?'Monitoring':s.total?'Finished':'Idle';
+ $('sdot').style.background=att?'var(--crit)':run?'var(--ok)':'var(--mu)';$('sside').textContent=att?'Attack detected':run?'Monitoring':'Idle';
+ $('k0').className='kpi '+st;$('kv0').textContent=att?'ATTACK':run?'Normal':'Idle';
+ $('kv1').textContent=last?last.frames:0;$('kv2').textContent=last?last.deauth:0;$('kv3').textContent=att?Object.keys(devs).length&&AL[0]?1:0:0;$('k3').className='kpi '+(att?'bad':'');
+ $('kv4').textContent=AL.length;$('kv5').textContent=s.total.toLocaleString();draw();
+ $('recent').innerHTML=AL.length?AL.slice(0,8).map(row).join(''):'<tr><td class="empty" style="display:block">No alerts. Traffic is normal or no session is running.</td></tr>';
+ $('all').innerHTML=AL.map(row).join('');$('noal').style.display=AL.length?'none':'block';
+ const top=Object.entries(devs).sort((a,b)=>b[1]-a[1]).slice(0,5),m=top.length?top[0][1]:1;
+ $('top').innerHTML=top.length?top.map(([k,v])=>`<div><span class="mono">${k}</span><span class="t"><i style="width:${v/m*100}%;background:var(--crit)"></i></span><b class="mono">${v}</b></div>`).join(''):'<div class="empty" style="display:block">No suspect devices.</div>'}
+view();setInterval(tick,1000);tick();addEventListener('resize',draw);
 </script></body></html>

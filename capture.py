@@ -30,3 +30,16 @@ def pcap_frames(path, stop, speed=1.0):
         if not f: continue
         if last is not None and speed > 0: time.sleep(min(max(f["t"] - last, 0) / speed, 0.5))
         last = f["t"]; yield f
+
+def csv_frames(path, stop, speed=1.0):
+    """Replay events from a dataset-format CSV (@timestamp, mac_address, association)."""
+    import pandas as pd
+    d = pd.read_csv(path)
+    ts = pd.to_datetime(d["@timestamp"].str.replace(" @ ", " "), format="%b %d, %Y %H:%M:%S.%f")
+    ev = pd.DataFrame({"t": (ts - pd.Timestamp("1970-01-01")) / pd.Timedelta(seconds=1),
+                       "dev": d["mac_address"], "dis": (d["association"] == "disassociated").astype(int)}).sort_values("t")
+    last = None
+    for r in ev.itertuples():
+        if stop.is_set(): return
+        if last is not None and speed > 0: time.sleep(min(max(r.t - last, 0) / speed, 0.5))
+        last = r.t; yield dict(t=r.t, dev=r.dev, dis=r.dis)
