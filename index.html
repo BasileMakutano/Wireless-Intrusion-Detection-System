@@ -1,0 +1,53 @@
+<!doctype html><html><head><meta charset="utf-8"><title>WIDS</title>
+<style>
+body{font-family:system-ui,sans-serif;margin:0;background:#0f172a;color:#e2e8f0}
+header{padding:14px 24px;background:#1e293b;display:flex;justify-content:space-between;align-items:center}
+main{padding:20px;display:grid;grid-template-columns:2fr 1fr;gap:16px}
+.card{background:#1e293b;border-radius:10px;padding:16px}h3{margin:0 0 10px;font-size:15px;color:#94a3b8}
+input,select,button{padding:7px 10px;border-radius:6px;border:1px solid #475569;background:#0f172a;color:#e2e8f0}
+button{background:#2563eb;border:0;cursor:pointer}button.s{background:#475569}
+table{width:100%;border-collapse:collapse;font-size:13px}td,th{padding:5px 8px;text-align:left;border-bottom:1px solid #334155}
+.ok{color:#4ade80}.bad{color:#f87171;font-weight:700}canvas{width:100%;height:220px}
+.cm td{text-align:center;font-size:20px}
+</style></head><body>
+<header><b>Wi-Fi WIDS &middot; Random Forest</b><span id="status" class="ok">STATUS: idle</span></header>
+<main>
+<div>
+ <div class="card"><h3>Source</h3>
+  <select id="mode"><option value="pcap">PCAP replay</option><option value="live">Live (monitor iface)</option></select>
+  <input id="src" size="34" placeholder="capture.pcap  or  wlan0mon">
+  <input id="speed" size="3" value="5" title="replay speed">
+  <button onclick="go()">Start</button> <button class="s" onclick="fetch('/api/stop',{method:'POST'})">Stop</button>
+  <div id="err" class="bad"></div></div>
+ <div class="card" style="margin-top:16px"><h3>Frames/s (blue) &amp; deauth frames/s (red)</h3><canvas id="c" width="800" height="220"></canvas></div>
+ <div class="card" style="margin-top:16px"><h3>Alerts</h3>
+  <table><thead><tr><th>Time</th><th>MAC</th><th>Type</th><th>Deauth/s</th><th>Frames/s</th><th>Conf.</th></tr></thead><tbody id="al"></tbody></table></div>
+</div>
+<div>
+ <div class="card"><h3>Live</h3>Frames seen: <b id="tot">0</b><br>Alerts: <b id="na" class="bad">0</b></div>
+ <div class="card" style="margin-top:16px"><h3>Model (test set)</h3>Accuracy: <b id="acc">-</b>
+  <table class="cm"><tr><td></td><td>Pred normal</td><td>Pred attack</td></tr>
+  <tr><td>Actual normal</td><td id="m00">-</td><td id="m01">-</td></tr>
+  <tr><td>Actual attack</td><td id="m10">-</td><td id="m11">-</td></tr></table>
+  <h3 style="margin-top:14px">Feature importance</h3><table id="imp"></table></div>
+</div></main>
+<script>
+const $=i=>document.getElementById(i);
+function go(){fetch('/api/start',{method:'POST',headers:{'Content-Type':'application/json'},
+ body:JSON.stringify({mode:$('mode').value,source:$('src').value,speed:$('speed').value})})}
+fetch('/api/metrics').then(r=>r.json()).then(m=>{if(!m.accuracy)return;
+ $('acc').textContent=(m.accuracy*100).toFixed(2)+'%';const c=m.confusion_matrix;
+ $('m00').textContent=c[0][0];$('m01').textContent=c[0][1];$('m10').textContent=c[1][0];$('m11').textContent=c[1][1];
+ $('imp').innerHTML=Object.entries(m.importances).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`<tr><td>${k}</td><td>${v.toFixed(3)}</td></tr>`).join('')});
+function draw(h){const cv=$('c'),x=cv.getContext('2d');x.clearRect(0,0,cv.width,cv.height);if(!h.length)return;
+ const mx=Math.max(1,...h.map(p=>p.frames)),n=h.length;
+ [['frames','#3b82f6'],['deauth','#ef4444']].forEach(([k,col])=>{x.beginPath();x.strokeStyle=col;x.lineWidth=2;
+  h.forEach((p,i)=>{const X=i*(cv.width-10)/Math.max(n-1,1)+5,Y=cv.height-8-p[k]/mx*(cv.height-20);i?x.lineTo(X,Y):x.moveTo(X,Y)});x.stroke()});
+ x.fillStyle='#94a3b8';x.fillText('max '+mx,6,12)}
+async function tick(){const s=await (await fetch('/api/state')).json();
+ const att=s.history.length&&s.history[s.history.length-1].alert;
+ $('status').textContent='STATUS: '+(att?'ATTACK DETECTED':s.running?'monitoring':'idle');$('status').className=att?'bad':'ok';
+ $('err').textContent=s.error||'';$('tot').textContent=s.total;$('na').textContent=s.alerts.length;draw(s.history);
+ $('al').innerHTML=s.alerts.map(a=>`<tr><td>${a.time}</td><td>${a.mac}</td><td>${a.type}</td><td>${a.deauth}</td><td>${a.frames}</td><td>${a.conf}</td></tr>`).join('')}
+setInterval(tick,1000);tick();
+</script></body></html>
