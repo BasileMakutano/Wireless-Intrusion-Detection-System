@@ -76,6 +76,41 @@ Thumbs.db
 .DS_Store
 desktop.ini
 
+
+# Development and training scripts
+make_poster.py
+extract_awid3.py
+build_training.py
+train.py
+train_v2.py
+make_demo.py
+
+# Presentation files
+poster.pdf
+
+# Simulations
+demo_attack.csv
+timeline_demo.json
+
+# Datasets
+AWID3_Dataset/
+*.csv
+
+# Machine learning models
+*.joblib
+*.pkl
+
+# Python environment and cache
+venv/
+__pycache__/
+*.pyc
+
+# Temporary files
+*.swp
+*.swo
+.env
+
+
 # ==========================================
 # KEEP TRACKED IN V2:
 # metrics_v2.json
