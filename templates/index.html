@@ -1,138 +1,186 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1"><title>WIDS Console</title>
+<meta name="viewport" content="width=device-width,initial-scale=1"><title>WIDS</title>
 <style>
-:root{color-scheme:dark;--bg:#0d1218;--rail:#10171f;--panel:#151d27;--head:#19232f;--line:#243142;--tx:#d6dee8;--mu:#8596aa;--acc:#4c8dff;--ok:#2fbf71;--warn:#f0a63a;--crit:#f05252;--okb:#12392a;--critb:#451d22;--warnb:#443212}
-*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--tx);font:14px/1.45 "Segoe UI Variable Text","SF Pro Text",system-ui,sans-serif;display:grid;grid-template-columns:208px 1fr;min-height:100vh}
-.mono,td.m,.kpi b{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-variant-numeric:tabular-nums}
-:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
-nav{background:var(--rail);border-right:1px solid var(--line);padding:16px 10px;position:sticky;top:0;height:100vh}
-.brand{display:flex;gap:10px;align-items:center;padding:4px 8px 18px;font-weight:700;font-size:15px}
-.logo{width:28px;height:28px;border-radius:7px;background:var(--acc);display:grid;place-items:center}
-nav a{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:7px;color:var(--mu);text-decoration:none;margin-bottom:2px}
-nav a:hover{background:var(--head);color:var(--tx)}nav a[aria-current=page]{background:var(--head);color:var(--tx);box-shadow:inset 3px 0 var(--acc)}
-nav svg{width:17px;height:17px;flex:none}
-.side-foot{position:absolute;bottom:14px;left:18px;right:14px;font-size:12px;color:var(--mu)}
+:root{--bg:#f5f5f7;--card:#ffffffcc;--cardsolid:#fff;--ink:#1d1d1f;--mu:#6e6e73;--line:#d2d2d7;--acc:#0a84ff;--accbg:#eaf3ff;
+--ok:#1fa956;--okbg:#e6f8ed;--warn:#c9870a;--warnbg:#fff3df;--bad:#e0302a;--badbg:#fdeceb;--navbg:#ffffffb3}
+@media(prefers-color-scheme:dark){:root{--bg:#000;--card:#1c1c1ecc;--cardsolid:#1c1c1e;--ink:#f5f5f7;--mu:#98989d;--line:#38383a;--acc:#0a84ff;--accbg:#0a2a45;
+--ok:#32d74b;--okbg:#0f2a1a;--warn:#ff9f0a;--warnbg:#3a2a0a;--bad:#ff453a;--badbg:#3a1210;--navbg:#1c1c1eb3}}
+*{box-sizing:border-box}html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 -apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Helvetica,Arial,sans-serif;display:grid;grid-template-columns:230px 1fr;min-height:100vh}
+.mono{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-variant-numeric:tabular-nums}
+:focus-visible{outline:3px solid var(--acc);outline-offset:2px;border-radius:8px}
+nav{position:sticky;top:0;height:100vh;padding:20px 14px;background:var(--navbg);backdrop-filter:blur(20px);border-right:1px solid var(--line)}
+.brand{display:flex;gap:10px;align-items:center;padding:6px 10px 22px;font-weight:700;font-size:17px;letter-spacing:-.02em}
+.logo{width:30px;height:30px;border-radius:9px;background:linear-gradient(145deg,#0a84ff,#30d9ff);display:grid;place-items:center;box-shadow:0 2px 6px #0a84ff55}
+nav a{display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:11px;color:var(--mu);text-decoration:none;margin-bottom:3px;font-size:14.5px;font-weight:500;transition:background .15s}
+nav a:hover{background:var(--line)}nav a[aria-current=page]{background:var(--acc);color:#fff}
+nav svg{width:18px;height:18px;flex:none}
+.nbadge{margin-left:auto;background:var(--bad);color:#fff;border-radius:99px;font-size:11px;font-weight:700;padding:1px 7px;display:none;min-width:16px;text-align:center}
+.sidefoot{position:absolute;bottom:18px;left:24px;right:18px;font-size:12px;color:var(--mu)}
 .dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--mu);margin-right:6px}
-.top{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;padding:10px 20px;background:var(--rail);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:5}
-.top h1{font-size:16px;margin:0 auto 0 0;font-weight:600}
-.pill{display:inline-flex;align-items:center;gap:7px;padding:4px 11px;border-radius:99px;font-size:12.5px;font-weight:600;background:var(--head);color:var(--mu)}
-.pill.ok{background:var(--okb);color:var(--ok)}.pill.bad{background:var(--critb);color:var(--crit)}
-.pill.ok .dot{background:var(--ok)}.pill.bad .dot{background:var(--crit);animation:bl 1s infinite}@keyframes bl{50%{opacity:.25}}
-.src{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
-select,input[type=text]{height:34px;padding:0 10px;background:var(--bg);color:var(--tx);border:1px solid var(--line);border-radius:6px;font:inherit}input[type=text]{width:230px}
-button{height:34px;padding:0 14px;border-radius:6px;border:1px solid var(--line);background:var(--head);color:var(--tx);font:inherit;font-weight:600;cursor:pointer}
-button.pri{background:var(--acc);border-color:var(--acc);color:#fff}button.stop{background:var(--crit);border-color:var(--crit);color:#fff}
-#msg{width:100%;color:var(--crit);font-size:12.5px;display:none}
-main{padding:18px 20px 40px}.view{display:none}.view.on{display:block}
-.kpis{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin-bottom:14px}@media(max-width:1200px){.kpis{grid-template-columns:repeat(3,1fr)}}
-.kpi{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:12px 14px;border-top:3px solid var(--line)}
-.kpi span{color:var(--mu);font-size:12px}.kpi b{display:block;font-size:26px;font-weight:600;margin-top:2px}
-.kpi.ok{border-top-color:var(--ok)}.kpi.bad{border-top-color:var(--crit)}.kpi.bad b{color:var(--crit)}.kpi.ok b{color:var(--ok)}
-.grid{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr);gap:14px}@media(max-width:1100px){.grid{grid-template-columns:1fr}}
-.panel{background:var(--panel);border:1px solid var(--line);border-radius:8px;margin-bottom:14px;overflow:hidden}
-.ph{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:9px 14px;background:var(--head);border-bottom:1px solid var(--line);font-weight:600;font-size:13px}
-.ph small{color:var(--mu);font-weight:400}.pb{padding:12px 14px}
-.chartbox{position:relative}canvas{width:100%;height:260px;display:block}#tip{position:absolute;display:none;pointer-events:none;background:#0a0e13;border:1px solid var(--line);padding:7px 10px;border-radius:6px;font-size:12px;top:8px;white-space:nowrap}
-.lg{display:flex;gap:16px;font-size:12px;color:var(--mu);padding:0 14px 10px}.lg i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px}
-.tw{overflow:auto;max-height:420px}table{width:100%;border-collapse:collapse;font-size:13px}
-th{position:sticky;top:0;background:var(--head);color:var(--mu);font-weight:600;text-align:left;font-size:12px}th,td{padding:8px 14px;border-bottom:1px solid var(--line);white-space:nowrap}
-tr:hover td{background:#1a2430}.sev{padding:2px 8px;border-radius:4px;font-size:11.5px;font-weight:700}
-.sev.c{background:var(--critb);color:var(--crit)}.sev.h{background:var(--warnb);color:var(--warn)}.sev.m{background:var(--head);color:var(--mu)}
-.empty{padding:26px 14px;color:var(--mu);text-align:center}
-.bars div{display:grid;grid-template-columns:150px 1fr 40px;gap:10px;align-items:center;margin:8px 0;font-size:12.5px}.bars .t{height:8px;background:var(--bg);border-radius:4px}.bars .t i{display:block;height:100%;border-radius:4px;background:var(--acc)}
-.cm{display:grid;grid-template-columns:90px 1fr 1fr;gap:6px;text-align:center;font-size:12px}.cm .h{color:var(--mu);align-self:center}.cell{padding:14px 8px;border-radius:6px}.cell b{display:block;font-size:24px}
-.g{background:var(--okb);color:var(--ok)}.r{background:var(--critb);color:var(--crit)}
-.row2{display:grid;grid-template-columns:1fr 1fr;gap:14px}@media(max-width:1100px){.row2{grid-template-columns:1fr}}
-@media(max-width:800px){body{grid-template-columns:1fr}nav{display:none}}
-@media(prefers-reduced-motion:reduce){*{animation:none!important}}
+.topbar{position:sticky;top:0;z-index:6;display:flex;flex-wrap:wrap;gap:12px 16px;align-items:center;padding:14px 26px;background:var(--navbg);backdrop-filter:blur(20px);border-bottom:1px solid var(--line)}
+h1.pt{font-size:22px;margin:0 auto 0 0;font-weight:700;letter-spacing:-.02em}
+.pill{display:inline-flex;align-items:center;gap:7px;padding:6px 13px;border-radius:99px;font-size:13px;font-weight:600;background:var(--line);color:var(--mu)}
+.pill.ok{background:var(--okbg);color:var(--ok)}.pill.bad{background:var(--badbg);color:var(--bad)}
+.pill.ok .dot{background:var(--ok)}.pill.bad .dot{background:var(--bad);animation:bl 1.1s infinite}@keyframes bl{50%{opacity:.3}}
+.seg{display:inline-flex;background:var(--line);border-radius:10px;padding:3px;gap:2px}
+.seg input{position:absolute;opacity:0;width:0}.seg label{padding:7px 13px;border-radius:7px;font-size:13.5px;font-weight:600;color:var(--mu);cursor:pointer;transition:all .15s}
+.seg input:checked+label{background:var(--cardsolid);color:var(--ink);box-shadow:0 1px 3px #0002}
+input[type=text],select{height:38px;padding:0 13px;border:1px solid var(--line);border-radius:10px;background:var(--cardsolid);color:var(--ink);font:inherit;font-size:14px}
+input[type=text]{width:220px}
+button{height:38px;padding:0 18px;border-radius:99px;border:1px solid var(--line);background:var(--cardsolid);color:var(--ink);font:inherit;font-weight:600;font-size:14px;cursor:pointer;transition:transform .1s,opacity .15s}
+button:active{transform:scale(.96)}button.pri{background:var(--acc);border-color:var(--acc);color:#fff}button.stop,button.danger{background:var(--bad);border-color:var(--bad);color:#fff}
+button.sm{height:30px;padding:0 13px;font-size:12.5px}button:disabled{opacity:.4;cursor:default;transform:none}
+.tog{display:flex;align-items:center;gap:7px;font-size:13px;color:var(--mu);cursor:pointer}
+#msg{width:100%;color:var(--bad);font-size:12.5px;display:none}
+main{padding:26px 30px 50px;max-width:1500px}.view{display:none}.view.on{display:block;animation:fade .2s ease}
+@keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+.allclear{display:flex;align-items:center;gap:16px;background:var(--okbg);border-radius:20px;padding:22px 26px;margin-bottom:22px}
+.allclear .ic{width:44px;height:44px;border-radius:50%;background:var(--ok);display:grid;place-items:center;flex:none}
+.allclear h2{margin:0;font-size:19px;color:var(--ok)}.allclear p{margin:2px 0 0;color:var(--mu);font-size:13.5px}
+.threats{display:flex;flex-wrap:wrap;gap:16px;margin-bottom:22px}
+.tcard{flex:1 1 380px;min-width:320px;background:var(--cardsolid);border-radius:20px;overflow:hidden;box-shadow:0 1px 2px #0001,0 10px 28px #0001;border:1px solid var(--line)}
+.tcard .top{display:flex;gap:12px;align-items:flex-start;padding:18px 20px 14px;background:var(--badbg)}
+.tcard.high .top{background:var(--warnbg)}
+.tcard .ic{width:38px;height:38px;border-radius:11px;background:var(--bad);display:grid;place-items:center;flex:none;box-shadow:0 2px 6px #e0302a55}
+.tcard.high .ic{background:var(--warn);box-shadow:0 2px 6px #c9870a55}.tcard.ack .ic{background:var(--mu);box-shadow:none}
+.tcard h3{margin:0;font-size:16px;letter-spacing:-.01em}.tcard .sub{font-size:12.5px;color:var(--mu);margin-top:2px}
+.tfacts{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1px;background:var(--line)}
+.tfacts div{background:var(--cardsolid);padding:10px 14px}.tfacts span{display:block;font-size:10.5px;color:var(--mu);text-transform:uppercase;letter-spacing:.03em}.tfacts b{font-size:16px}
+.tcard p.what{font-size:13px;color:var(--mu);padding:14px 20px 0;margin:0}
+.tcard .act{display:flex;gap:8px;flex-wrap:wrap;padding:14px 20px 18px}
+.kpis{display:grid;grid-template-columns:repeat(6,1fr);gap:14px;margin-bottom:22px}@media(max-width:1200px){.kpis{grid-template-columns:repeat(3,1fr)}}
+.kpi{background:var(--cardsolid);border:1px solid var(--line);border-radius:18px;padding:16px 18px;box-shadow:0 1px 2px #0001}
+.kpi span{color:var(--mu);font-size:12px;font-weight:500}.kpi b{display:block;font-size:28px;font-weight:700;margin-top:3px;letter-spacing:-.02em}
+.kpi.bad b{color:var(--bad)}.kpi.ok b{color:var(--ok)}
+.grid{display:grid;grid-template-columns:minmax(0,1.7fr) minmax(0,1fr);gap:16px}@media(max-width:1100px){.grid{grid-template-columns:1fr}}
+.panel{background:var(--cardsolid);border:1px solid var(--line);border-radius:20px;margin-bottom:16px;overflow:hidden;box-shadow:0 1px 2px #0001}
+.ph{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:16px 20px;font-weight:700;font-size:15px;letter-spacing:-.01em}.ph small{color:var(--mu);font-weight:500;font-size:12.5px}.pb{padding:0 20px 18px}
+.chartbox{position:relative;padding:0 20px}canvas{width:100%;height:230px;display:block}#tip{position:absolute;display:none;pointer-events:none;background:var(--ink);color:var(--bg);padding:7px 11px;border-radius:9px;font-size:12px;top:4px;white-space:nowrap}
+.lg{display:flex;gap:16px;font-size:12px;color:var(--mu);padding:8px 20px 16px}.lg i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px;vertical-align:middle}
+.tw{overflow:auto;max-height:420px}table{width:100%;border-collapse:collapse;font-size:13.5px}th{position:sticky;top:0;background:var(--cardsolid);color:var(--mu);font-weight:600;text-align:left;font-size:11.5px;text-transform:uppercase;letter-spacing:.02em}
+th,td{padding:10px 20px;border-bottom:1px solid var(--line);white-space:nowrap}tr:hover td{background:var(--bg)}
+.tag{padding:3px 10px;border-radius:99px;font-size:11.5px;font-weight:700;display:inline-flex;align-items:center;gap:5px}
+.tag.bad,.st.a{background:var(--badbg);color:var(--bad)}.tag.warn{background:var(--warnbg);color:var(--warn)}.tag.mu,.st.e{background:var(--line);color:var(--mu)}.st.b{background:var(--okbg);color:var(--ok)}
+.empty{padding:34px 20px;color:var(--mu);text-align:center;font-size:13.5px}
+.bars div{display:grid;grid-template-columns:150px 1fr 42px;gap:10px;align-items:center;margin:9px 0;font-size:12.5px}.bars .t{height:7px;background:var(--line);border-radius:4px}.bars .t i{display:block;height:100%;border-radius:4px;background:var(--acc)}
+.cm{display:grid;grid-template-columns:92px 1fr 1fr;gap:8px;text-align:center;font-size:12px}.cm .h{color:var(--mu);align-self:center;font-weight:500}.cell{padding:16px 10px;border-radius:14px}.cell b{display:block;font-size:25px;font-weight:700}
+.g{background:var(--okbg);color:var(--ok)}.r{background:var(--badbg);color:var(--bad)}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:16px}@media(max-width:1100px){.row2{grid-template-columns:1fr}}
+#toast{position:fixed;right:24px;bottom:24px;background:var(--cardsolid);color:var(--ink);padding:14px 18px;border-radius:16px;font-weight:600;font-size:13.5px;display:none;z-index:9;box-shadow:0 10px 32px #0004;border:1px solid var(--line);display:flex;align-items:center;gap:10px;max-width:320px}
+#toast .ic{width:26px;height:26px;border-radius:50%;background:var(--bad);display:grid;place-items:center;flex:none}
+@media(max-width:800px){body{grid-template-columns:1fr}nav{display:none}}@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style></head><body>
-<nav aria-label="Main"><div class="brand"><span class="logo"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round"><path d="M2 9a15 15 0 0 1 20 0M5 13a10 10 0 0 1 14 0M8.5 16.5a5 5 0 0 1 7 0"/><circle cx="12" cy="20" r="1" fill="#fff"/></svg></span>WIDS Console</div>
+<nav aria-label="Main"><div class="brand"><span class="logo"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#fff" stroke-width="2.3" stroke-linecap="round"><path d="M2 9a15 15 0 0 1 20 0M5 13a10 10 0 0 1 14 0M8.5 16.5a5 5 0 0 1 7 0"/><circle cx="12" cy="20" r="1" fill="#fff"/></svg></span>WIDS</div>
  <a href="#overview" data-v="overview"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h4l3-8 4 16 3-8h4"/></svg>Overview</a>
- <a href="#alerts" data-v="alerts"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3 2 21h20zM12 10v5M12 18h.01"/></svg>Alerts</a>
+ <a href="#alerts" data-v="alerts"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3 2 21h20zM12 10v5M12 18h.01"/></svg>Incidents<span class="nbadge" id="nb">0</span></a>
  <a href="#model" data-v="model"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>Model</a>
- <div class="side-foot"><span class="dot" id="sdot"></span><span id="sside">Idle</span><br>Random Forest, runs locally</div></nav>
+ <div class="sidefoot"><span class="dot" id="sdot"></span><span id="sside">Idle</span><br>Random Forest + rules &middot; runs locally</div></nav>
 <div>
-<div class="top"><h1 id="title">Overview</h1><span class="pill" id="pill"><span class="dot"></span><span id="ptxt">Idle</span></span>
- <form class="src" onsubmit="event.preventDefault();toggle()" aria-label="Data source">
-  <select id="mode" onchange="fill()" aria-label="Source type"><option value="pcap">PCAP replay</option><option value="live">Live capture</option></select>
+<div class="topbar"><h1 class="pt" id="title">Overview</h1><span class="pill" id="pill"><span class="dot"></span><span id="ptxt">Idle</span></span>
+ <label class="tog"><input type="checkbox" id="snd"> Alarm</label>
+ <form onsubmit="event.preventDefault();toggle()" aria-label="Data source" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+  <div class="seg" role="radiogroup" aria-label="Source type"><input type="radio" name="mode" id="m1" value="pcap" checked onchange="fill()"><label for="m1">Replay</label><input type="radio" name="mode" id="m2" value="live" onchange="fill()"><label for="m2">Live</label></div>
   <input type="text" id="src" list="opts" aria-label="File or interface" autocomplete="off"><datalist id="opts"></datalist>
   <select id="speed" aria-label="Replay speed"><option value="1">1x</option><option value="5" selected>5x</option><option value="20">20x</option></select>
   <button class="pri" id="go">Start</button></form><div id="msg" role="alert"></div></div>
 <main>
 <section class="view" id="v-overview">
+ <div class="allclear" id="clear"><span class="ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span><div><h2 id="ch">Not monitoring</h2><p id="cp">Choose a file or interface above, then press Start.</p></div></div>
+ <div class="threats" id="threats"></div>
  <div class="kpis">
-  <div class="kpi" id="k0"><span>Threat status</span><b id="kv0">Idle</b></div>
-  <div class="kpi"><span>Events/s</span><b id="kv1">0</b></div>
-  <div class="kpi"><span>Disconnects/s</span><b id="kv2">0</b></div>
-  <div class="kpi" id="k3"><span>Active incidents</span><b id="kv3">0</b></div>
-  <div class="kpi"><span>Total alerts</span><b id="kv4">0</b></div>
-  <div class="kpi"><span>Events analysed</span><b id="kv5">0</b></div></div>
+  <div class="kpi" id="k0"><span>Threat status</span><b id="kv0">Idle</b></div><div class="kpi"><span>Events/s</span><b id="kv1">0</b></div><div class="kpi"><span>Disconnects/s</span><b id="kv2">0</b></div>
+  <div class="kpi" id="k3"><span>Active threats</span><b id="kv3">0</b></div><div class="kpi"><span>Total incidents</span><b id="kv4">0</b></div><div class="kpi"><span>Events analysed</span><b id="kv5">0</b></div></div>
  <div class="grid"><div>
-  <div class="panel"><div class="ph">Association and disconnect events <small>last 2 minutes, 1 s resolution</small></div>
-   <div class="chartbox"><canvas id="c" role="img" aria-label="Event rate over time"></canvas><div id="tip"></div></div>
-   <div class="lg"><span><i style="background:var(--acc)"></i>All events</span><span><i style="background:var(--crit)"></i>Disconnect / deauth</span><span><i style="background:#f0525233"></i>Alert active</span></div></div>
+  <div class="panel"><div class="ph">Event activity <small>last 2 minutes</small></div><div class="chartbox"><canvas id="c" role="img" aria-label="Event rate over time"></canvas><div id="tip"></div></div>
+   <div class="lg"><span><i style="background:var(--acc)"></i>All events</span><span><i style="background:var(--bad)"></i>Disconnects</span><span><i style="background:#e0302a30"></i>Alert active</span></div></div>
   <div class="panel"><div class="ph">Latest alerts <small><a href="#alerts" style="color:var(--acc)">View all</a></small></div><div class="tw" style="max-height:260px"><table><tbody id="recent"></tbody></table></div></div></div>
- <div>
-  <div class="panel"><div class="ph">Top suspect devices <small>by alerts</small></div><div class="pb bars" id="top"><div class="empty">No suspect devices.</div></div></div>
-  <div class="panel"><div class="ph">Detection model</div><div class="pb"><div style="font-size:12px;color:var(--mu)">Test accuracy</div><div class="mono" style="font-size:30px" id="acc2">--</div><div style="color:var(--mu);font-size:12.5px;margin-top:6px">Random Forest on per-device event timing. Details in the Model view.</div></div></div></div></div>
+ <div><div class="panel"><div class="ph">Top suspect devices</div><div class="pb bars" id="top"></div></div>
+  <div class="panel"><div class="ph">Detection model</div><div class="pb"><div style="font-size:12px;color:var(--mu)">Test accuracy</div><div class="mono" style="font-size:32px;font-weight:700" id="acc2">--</div><div style="color:var(--mu);font-size:12.5px;margin-top:6px">Random Forest (deauth floods) plus two threshold rules.</div></div></div></div></div>
 </section>
 <section class="view" id="v-alerts">
- <div class="panel"><div class="ph">Alert log <span><button onclick="csv()">Export CSV</button></span></div><div class="tw" style="max-height:none"><table><thead><tr><th>Time</th><th>Severity</th><th>Device (MAC)</th><th>Type</th><th>Disconnects/s</th><th>Events/s</th><th>Confidence</th></tr></thead><tbody id="all"></tbody></table><div id="noal" class="empty">No alerts. Start a monitoring session to see detections here. Alerts are also saved to alerts.csv.</div></div></div>
+ <div class="panel"><div class="ph">Incidents <small>consecutive alerts of one type from one device</small></div><div class="tw"><table><thead><tr><th>Status</th><th>Type</th><th>Device</th><th>Started</th><th>Duration</th><th>Peak</th><th>Alerts</th><th>Confidence</th><th>Response</th></tr></thead><tbody id="inc"></tbody></table><div id="noinc" class="empty">No incidents. Start a session to monitor traffic.</div></div></div>
+ <div class="row2"><div class="panel"><div class="ph">Blocklist <label class="tog"><input type="checkbox" id="auto" onchange="post('/api/autoblock',{on:this.checked})"> Auto-block</label></div><div class="tw" style="max-height:260px"><table><thead><tr><th>Device</th><th>Since</th><th>Reason</th><th></th></tr></thead><tbody id="bl"></tbody></table><div id="nobl" class="empty">No blocked devices.</div></div>
+  <div class="pb" style="color:var(--mu);font-size:12.5px;border-top:1px solid var(--line);padding-top:12px">Logs to a blocklist and blocked.csv only &mdash; it does not enforce on the access point.</div></div>
+ <div class="panel"><div class="ph">Alert log <button class="sm" onclick="csv()">Export CSV</button></div><div class="tw" style="max-height:340px"><table><thead><tr><th>Time</th><th>Severity</th><th>Type</th><th>Device</th><th>Disc./s</th><th>Events/s</th><th>Conf.</th></tr></thead><tbody id="all"></tbody></table><div id="noal" class="empty">No alerts yet. Saved to alerts.csv.</div></div></div></div>
 </section>
-<section class="view" id="v-model">
- <div class="row2"><div class="panel"><div class="ph">Confusion matrix <small>held-out test set</small></div><div class="pb">
-  <div class="mono" style="font-size:34px" id="acc">--</div><div style="color:var(--mu);margin-bottom:12px">accuracy</div>
-  <div class="cm"><div></div><div class="h">Predicted normal</div><div class="h">Predicted attack</div>
-   <div class="h">Actual normal</div><div class="cell g"><b class="mono" id="m00">-</b>True negative</div><div class="cell r"><b class="mono" id="m01">-</b>False alarm</div>
-   <div class="h">Actual attack</div><div class="cell r"><b class="mono" id="m10">-</b>Missed attack</div><div class="cell g"><b class="mono" id="m11">-</b>True positive</div></div>
-  <div class="bars" style="margin-top:14px"><div><span>Recall</span><span class="t"><i id="recb" style="width:0"></i></span><b class="mono" id="rec">-</b></div><div><span>Precision</span><span class="t"><i id="preb" style="width:0"></i></span><b class="mono" id="pre">-</b></div></div></div></div>
- <div class="panel"><div class="ph">Feature importance</div><div class="pb bars" id="imp"></div></div></div>
-</section></main></div>
+<section class="view" id="v-model"><div class="row2"><div class="panel"><div class="ph">Confusion matrix <small>held-out test set, 5 classes</small></div><div class="pb">
+ <div class="mono" style="font-size:36px;font-weight:700" id="acc">--</div><div style="color:var(--mu);margin-bottom:6px">overall accuracy</div>
+ <div id="cmwrap" style="overflow-x:auto"></div>
+ <div id="perclass" style="margin-top:16px"></div></div></div>
+ <div class="panel"><div class="ph">Feature importance <small>drives the ML core</small></div><div class="pb bars" id="imp"></div></div></div>
+ <div class="panel"><div class="ph">How each attack type is told apart</div><div class="pb" id="howtable" style="font-size:13.5px;color:var(--mu);line-height:1.7"></div></div>
+</section></main></div><div id="toast" role="status"></div>
 <script>
-const $=i=>document.getElementById(i);let S={interfaces:[],pcaps:[]},run=false,H=[],AL=[],T0=0;
+const $=i=>document.getElementById(i);let S={interfaces:[],pcaps:[]},run=false,H=[],AL=[],ST={incidents:[],blocked:[]},acked=new Set(),seen=new Set(),ac=null;
+const TYPES={deauth:{label:"Deauthentication flood",sev:"bad",what:"This device is sending a burst of forged disconnect messages. Normal devices send at most ~1/s, so others may be repeatedly kicked off Wi-Fi.",icon:'<path d="M2 8.5a16 16 0 0 1 20 0M5.5 12.5a11 11 0 0 1 13 0M9 16.5a6 6 0 0 1 6 0"/><path d="M4 4l16 16" stroke-width="2.4"/>'},
+ assoc:{label:"Association flood",sev:"warn",what:"This device is flooding connection requests rather than disconnects, which can exhaust the access point's connection table.",icon:'<circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><path d="M17 8h5M19.5 5.5v5"/>'},
+ bcast:{label:"Broadcast deauth",sev:"bad",what:"Several devices disconnected in the same second, the signature of a flood aimed at the access point rather than one victim.",icon:'<path d="M12 2v4M12 18v4M4.9 4.9l2.8 2.8M16.3 16.3l2.8 2.8M2 12h4M18 12h4M4.9 19.1l2.8-2.8M16.3 7.7l2.8-2.8"/><circle cx="12" cy="12" r="3"/>'}};
+const ICON=c=>`<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">`;
 const NAMES={n_events:"Events this second",n_dis:"Disconnects this second",dis_ratio:"Disconnect share",min_gap:"Shortest event gap",n_10s:"Events, last 10 s",n_60s:"Events, last 60 s",gap_prev:"Time since last event"};
+const key=i=>i.mac+'@'+i.type+'@'+i.start,post=(u,b)=>fetch(u,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b||{})});
 function view(){const v=(location.hash||'#overview').slice(1);document.querySelectorAll('.view').forEach(e=>e.classList.toggle('on',e.id=='v-'+v));
- document.querySelectorAll('nav a').forEach(a=>{a.toggleAttribute('aria-current',a.dataset.v==v);if(a.dataset.v==v)a.setAttribute('aria-current','page')});$('title').textContent=v[0].toUpperCase()+v.slice(1);draw()}
+ document.querySelectorAll('nav a').forEach(a=>{a.removeAttribute('aria-current');if(a.dataset.v==v)a.setAttribute('aria-current','page')});$('title').textContent={overview:'Overview',alerts:'Incidents and response',model:'Model'}[v]||v;draw()}
 addEventListener('hashchange',view);
 fetch('/api/sources').then(r=>r.json()).then(s=>{S=s;fill()});
-function fill(){const l=$('mode').value=='live'?S.interfaces:S.pcaps;$('opts').innerHTML=l.map(x=>`<option value="${x}">`).join('');
- $('src').placeholder=$('mode').value=='live'?'Interface, e.g. wlan0':'Capture file, e.g. test.pcap';$('speed').hidden=$('mode').value=='live'}
+function fill(){const v=document.querySelector('input[name=mode]:checked').value,l=v=='live'?S.interfaces:S.pcaps;$('opts').innerHTML=l.map(x=>`<option value="${x}">`).join('');$('src').placeholder=v=='live'?'Interface, e.g. wlan0':'File, e.g. demo_deauth.csv';$('speed').hidden=v=='live'}
 function err(t){const m=$('msg');m.textContent=t;m.style.display=t?'block':'none'}
-function toggle(){err('');if(run){fetch('/api/stop',{method:'POST'});return}
- if(!$('src').value.trim()){err($('mode').value=='live'?'Enter your monitor-mode interface, for example wlan0.':'Enter a capture file path, for example test.pcap.');$('src').focus();return}
- fetch('/api/start',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({mode:$('mode').value,source:$('src').value.trim(),speed:$('speed').value})})}
+function toggle(){err('');if(run){post('/api/stop');return}const v=document.querySelector('input[name=mode]:checked').value;if(!$('src').value.trim()){err(v=='live'?'Enter your monitor-mode interface, for example wlan0.':'Enter a file, for example demo_deauth.csv.');$('src').focus();return}
+ post('/api/start',{mode:v,source:$('src').value.trim(),speed:$('speed').value})}
 const pct=(a,b)=>b?a/b*100:0;
-fetch('/api/metrics').then(r=>r.json()).then(m=>{if(!m.accuracy)return;const c=m.confusion_matrix,f=n=>n.toLocaleString();
- ['acc','acc2'].forEach(i=>$(i).textContent=(m.accuracy*100).toFixed(2)+'%');$('m00').textContent=f(c[0][0]);$('m01').textContent=f(c[0][1]);$('m10').textContent=f(c[1][0]);$('m11').textContent=f(c[1][1]);
- const r=pct(c[1][1],c[1][0]+c[1][1]),p=pct(c[1][1],c[1][1]+c[0][1]);$('rec').textContent=r.toFixed(1)+'%';$('pre').textContent=p.toFixed(1)+'%';$('recb').style.width=r+'%';$('preb').style.width=p+'%';
- const e=Object.entries(m.importances).sort((a,b)=>b[1]-a[1]),mx=e[0][1]||1;
- $('imp').innerHTML=e.map(([k,v])=>`<div><span>${NAMES[k]||k}</span><span class="t"><i style="width:${v/mx*100}%"></i></span><b class="mono">${(v*100).toFixed(1)}%</b></div>`).join('')});
-const sev=c=>c>=.9?['c','Critical']:c>=.7?['h','High']:['m','Medium'];
-const row=a=>{const s=sev(a.conf);return `<tr><td class="m">${a.time}</td><td><span class="sev ${s[0]}">${s[1]}</span></td><td class="m">${a.mac}</td><td>${a.type}</td><td class="m">${a.deauth}</td><td class="m">${a.frames}</td><td class="m">${(a.conf*100).toFixed(0)}%</td></tr>`};
-function csv(){const t='time,mac,type,disconnects,events,confidence\n'+AL.map(a=>[a.time,a.mac,a.type,a.deauth,a.frames,a.conf].join(',')).join('\n');
- const l=document.createElement('a');l.href=URL.createObjectURL(new Blob([t],{type:'text/csv'}));l.download='alerts_export.csv';l.click()}
+const CLABEL=c=>c=='normal'?'Normal':(TYPES[c]?TYPES[c].label:c);
+fetch('/api/metrics').then(r=>r.json()).then(m=>{if(!m.accuracy)return;const C=m.classes,cm=m.confusion_matrix,f=n=>n.toLocaleString();
+ $('acc').textContent=(m.accuracy*100).toFixed(2)+'%';$('acc2').textContent=(m.accuracy*100).toFixed(1)+'%';
+ const tbl=document.createElement('table');let thead='<tr><th></th>'+C.map(c=>`<th>Pred: ${CLABEL(c)}</th>`).join('')+'</tr>';
+ let rows=cm.map((row,i)=>`<tr><th>Actual: ${CLABEL(C[i])}</th>`+row.map((v,j)=>`<td class="mono" style="text-align:center;${i==j?'color:var(--ok);font-weight:700':v>0?'color:var(--bad)':'color:var(--mu)'}">${f(v)}</td>`).join('')+'</tr>').join('');
+ tbl.innerHTML=thead+rows;$('cmwrap').innerHTML='';$('cmwrap').appendChild(tbl);
+ const pc=m.per_class||{};$('perclass').innerHTML='<div style="font-size:12px;color:var(--mu);text-transform:uppercase;margin-bottom:6px">Per-class precision / recall</div>'+
+  C.filter(c=>c!='normal').map(c=>{const s=pc[c]||{precision:0,recall:0,support:0};return `<div class="f"><div class="r"><span>${CLABEL(c)}</span><b class="mono">P ${(s.precision*100).toFixed(0)}% &nbsp; R ${(s.recall*100).toFixed(0)}%</b></div><small>${s.support} test examples</small></div>`}).join('');
+ const e=Object.entries(m.importances).sort((a,b)=>b[1]-a[1]),mx=e[0][1]||1;$('imp').innerHTML=e.map(([k,v])=>`<div><span>${NAMES[k]||k}</span><span class="t"><i style="width:${v/mx*100}%"></i></span><b class="mono">${(v*100).toFixed(1)}%</b></div>`).join('');
+ $('howtable').innerHTML=C.filter(c=>c!='normal').map(c=>TYPES[c]?`<b style="color:var(--ink)">${TYPES[c].label}</b> &mdash; ${TYPES[c].what}<br>`:'').join('')+
+  '<b style="color:var(--ink)">Broadcast deauth</b> &mdash; a separate, network-wide rule (not the ML model): several different devices disconnect inside the same one-second window, which a lone attack on one victim cannot produce.';
+});
+const sevLab=s=>s=='bad'?'Critical':s=='warn'?'High':'Medium';
+const row=a=>{const T=TYPES[a.type]||{sev:'mu',label:a.type};return `<tr><td class="m">${a.time}</td><td><span class="tag ${T.sev}">${sevLab(T.sev)}</span></td><td>${T.label}</td><td class="m">${a.mac}</td><td class="m">${a.deauth}</td><td class="m">${a.frames}</td><td class="m">${(a.conf*100).toFixed(0)}%</td></tr>`};
+function dl(name,text){const l=document.createElement('a');l.href=URL.createObjectURL(new Blob([text],{type:'text/csv'}));l.download=name;l.click()}
+function csv(){dl('alerts_export.csv','time,mac,type,disconnects,events,confidence\n'+AL.map(a=>[a.time,a.mac,a.type,a.deauth,a.frames,a.conf].join(',')).join('\n'))}
+function evidence(mac){const r=AL.filter(a=>a.mac==mac);dl('evidence_'+mac.replace(/[,:]/g,'_')+'.csv','time,mac,type,disconnects,events,confidence\n'+r.map(a=>[a.time,a.mac,a.type,a.deauth,a.frames,a.conf].join(',')).join('\n'))}
+function beep(){try{ac=ac||new AudioContext();[0,.25,.5].forEach(t=>{const o=ac.createOscillator(),g=ac.createGain();o.frequency.value=880;o.connect(g);g.connect(ac.destination);g.gain.setValueAtTime(.15,ac.currentTime+t);g.gain.exponentialRampToValueAtTime(.001,ac.currentTime+t+.2);o.start(ac.currentTime+t);o.stop(ac.currentTime+t+.22)})}catch(e){}}
+function toast(t){const e=$('toast');e.innerHTML=`<span class="ic">${ICON('#fff')}<path d="M12 9v4M12 17h.01M10.3 3.8 2.6 17a1.8 1.8 0 0 0 1.6 2.7h15.6a1.8 1.8 0 0 0 1.6-2.7L13.7 3.8a1.8 1.8 0 0 0-3.2 0Z"/></svg></span>${t}`;e.style.display='flex';setTimeout(()=>e.style.display='none',6000)}
 const css=v=>getComputedStyle(document.documentElement).getPropertyValue(v).trim();
 function draw(){const cv=$('c');if(!cv||!cv.clientWidth)return;const d=devicePixelRatio||1,W=cv.clientWidth,Hh=cv.clientHeight;cv.width=W*d;cv.height=Hh*d;const x=cv.getContext('2d');x.scale(d,d);
- x.font='11px system-ui';x.fillStyle=css('--mu');const L=36,B=20;if(!H.length){x.fillText('No data yet. Start a session to see live traffic.',L+8,Hh/2);return}
+ x.font='11px -apple-system,sans-serif';x.fillStyle=css('--mu');const L=32,B=20;if(!H.length){x.fillText('No data yet. Start a session to see live traffic.',L+8,Hh/2);return}
  const mx=Math.max(5,...H.map(p=>p.frames)),n=H.length,X=i=>L+i*(W-L-6)/Math.max(n-1,1),Y=v=>Hh-B-v/mx*(Hh-B-10);
- x.strokeStyle=css('--line');for(let k=0;k<=4;k++){const v=mx*k/4;x.beginPath();x.moveTo(L,Y(v));x.lineTo(W,Y(v));x.stroke();x.fillText(Math.round(v),4,Y(v)+4)}
- const bw=Math.max(3,(W-L)/n);H.forEach((p,i)=>{if(p.alert){x.fillStyle='#f0525230';x.fillRect(X(i)-bw/2,0,bw,Hh-B)}});
- const ln=(k,c,fl)=>{x.beginPath();H.forEach((p,i)=>i?x.lineTo(X(i),Y(p[k])):x.moveTo(X(i),Y(p[k])));x.strokeStyle=c;x.lineWidth=2;x.lineJoin='round';x.stroke();if(fl){x.lineTo(X(n-1),Y(0));x.lineTo(X(0),Y(0));x.globalAlpha=.14;x.fillStyle=c;x.fill();x.globalAlpha=1}};
- ln('frames',css('--acc'),1);ln('deauth',css('--crit'),0);x.fillStyle=css('--mu');x.fillText('-2m',L,Hh-5);x.fillText('now',W-24,Hh-5)}
-$('c').addEventListener('mousemove',e=>{if(!H.length)return;const r=e.target.getBoundingClientRect(),i=Math.max(0,Math.min(H.length-1,Math.round((e.clientX-r.left-36)/(r.width-42)*(H.length-1)))),p=H[i],t=$('tip');
- t.style.display='block';t.innerHTML=`<b class="mono">${new Date(p.t*1000).toLocaleTimeString()}</b><br>Events ${p.frames}, disconnects ${p.deauth}${p.alert?'<br><span style="color:var(--crit)">Attack flagged</span>':''}`;t.style.left=Math.min(e.clientX-r.left+12,r.width-150)+'px'});
+ x.strokeStyle=css('--line');for(let k=0;k<=4;k++){const v=mx*k/4;x.beginPath();x.moveTo(L,Y(v));x.lineTo(W,Y(v));x.stroke();x.fillText(Math.round(v),2,Y(v)+4)}
+ const bw=Math.max(3,(W-L)/n);H.forEach((p,i)=>{if(p.alert){x.fillStyle=css('--bad')+'22';x.fillRect(X(i)-bw/2,0,bw,Hh-B)}});
+ const ln=(k,c,fl)=>{x.beginPath();H.forEach((p,i)=>i?x.lineTo(X(i),Y(p[k])):x.moveTo(X(i),Y(p[k])));x.strokeStyle=c;x.lineWidth=2.5;x.lineJoin='round';x.stroke();if(fl){x.lineTo(X(n-1),Y(0));x.lineTo(X(0),Y(0));x.globalAlpha=.1;x.fillStyle=c;x.fill();x.globalAlpha=1}};
+ ln('frames',css('--acc'),1);ln('deauth',css('--bad'),0);x.fillStyle=css('--mu');x.fillText('-2m',L,Hh-5);x.fillText('now',W-24,Hh-5)}
+$('c').addEventListener('mousemove',e=>{if(!H.length)return;const r=e.target.getBoundingClientRect(),i=Math.max(0,Math.min(H.length-1,Math.round((e.clientX-r.left-32)/(r.width-38)*(H.length-1)))),p=H[i],t=$('tip');
+ t.style.display='block';t.innerHTML=`<b class="mono">${new Date(p.t*1000).toLocaleTimeString()}</b><br>Events ${p.frames}, disconnects ${p.deauth}${p.alert?'<br><span style="color:var(--bad)">Alert active</span>':''}`;t.style.left=Math.min(e.clientX-r.left+12,r.width-150)+'px'});
 $('c').addEventListener('mouseleave',()=>$('tip').style.display='none');
-async function tick(){const s=await (await fetch('/api/state')).json();H=s.history;AL=s.alerts;if(s.running&&!run)T0=Date.now();run=s.running;
- const last=H[H.length-1],att=last&&last.alert,devs={};AL.forEach(a=>devs[a.mac]=(devs[a.mac]||0)+1);
- $('go').textContent=run?'Stop':'Start';$('go').className=run?'stop':'pri';if(s.error)err(s.error);
- const st=att?'bad':run?'ok':'';$('pill').className='pill '+st;$('ptxt').textContent=att?'Attack detected':run?'Monitoring':s.total?'Finished':'Idle';
- $('sdot').style.background=att?'var(--crit)':run?'var(--ok)':'var(--mu)';$('sside').textContent=att?'Attack detected':run?'Monitoring':'Idle';
- $('k0').className='kpi '+st;$('kv0').textContent=att?'ATTACK':run?'Normal':'Idle';
- $('kv1').textContent=last?last.frames:0;$('kv2').textContent=last?last.deauth:0;$('kv3').textContent=att?Object.keys(devs).length&&AL[0]?1:0:0;$('k3').className='kpi '+(att?'bad':'');
- $('kv4').textContent=AL.length;$('kv5').textContent=s.total.toLocaleString();draw();
- $('recent').innerHTML=AL.length?AL.slice(0,8).map(row).join(''):'<tr><td class="empty" style="display:block">No alerts. Traffic is normal or no session is running.</td></tr>';
+function tcard(i){const T=TYPES[i.type]||{sev:'mu',label:i.type,what:'',icon:''},k=key(i),ack=acked.has(k),bl=ST.blocked.some(b=>b.mac==i.mac);
+ return `<div class="tcard ${T.sev=='warn'?'high':''} ${ack?'ack':''}"><div class="top"><span class="ic">${ICON('#fff')}${T.icon}</svg></span><div><h3>${ack?'Acknowledged: ':''}${T.label}</h3><div class="sub">${i.type=='bcast'?i.mac.split(',').length+' devices affected':i.mac}</div></div></div>
+ <div class="tfacts"><div><span>Started</span><b class="mono">${i.first}</b></div><div><span>Duration</span><b class="mono">${i.duration}s</b></div><div><span>Peak</span><b class="mono">${i.peak}/s</b></div></div>
+ <p class="what">${T.what}</p>
+ <div class="act">${i.type!='bcast'?`<button class="danger sm" ${bl?'disabled':''} onclick="post('/api/block',{mac:'${i.mac}'})">${bl?'Blocked':'Block device'}</button>`:''}
+ <button class="sm" ${ack?'disabled':''} onclick="acked.add('${k}');render()">Acknowledge</button><button class="sm" onclick="evidence('${i.mac}')">Export evidence</button></div></div>`}
+function render(){const act=ST.incidents.filter(i=>i.active),bl=new Set(ST.blocked.map(b=>b.mac));const anyUnacked=act.some(i=>!acked.has(key(i)));
+ const st=act.length?'bad':run?'ok':'';$('pill').className='pill '+st;$('ptxt').textContent=act.length?act.length+' active threat'+(act.length>1?'s':''):run?'Monitoring':ST.total?'Finished':'Idle';
+ $('sdot').style.background=act.length?'var(--bad)':run?'var(--ok)':'var(--mu)';$('sside').textContent=act.length?'Attack detected':run?'Monitoring':'Idle';
+ document.title=anyUnacked?'\u26A0 WIDS \u2014 Attack detected':'WIDS';
+ $('clear').style.display=act.length?'none':'flex';if(!act.length){$('ch').textContent=run?'All clear':ST.total?'Finished, no active threats':'Not monitoring';$('cp').textContent=run?'Traffic looks normal. Watching every second.':ST.total?'Review incidents below.':'Choose a file or interface above, then press Start.'}
+ $('threats').innerHTML=act.map(tcard).join('');
+ $('nb').style.display=act.length?'inline':'none';$('nb').textContent=act.length;
+ const last=H[H.length-1];$('k0').className='kpi '+st;$('kv0').textContent=act.length?'ATTACK':run?'Normal':'Idle';$('kv1').textContent=last?last.frames:0;$('kv2').textContent=last?last.deauth:0;
+ $('kv3').textContent=act.length;$('k3').className='kpi '+(act.length?'bad':'');$('kv4').textContent=ST.incidents.length;$('kv5').textContent=ST.total.toLocaleString();draw();
+ $('recent').innerHTML=AL.length?AL.slice(0,8).map(row).join(''):'<tr><td class="empty" style="display:block">No alerts yet.</td></tr>';
  $('all').innerHTML=AL.map(row).join('');$('noal').style.display=AL.length?'none':'block';
- const top=Object.entries(devs).sort((a,b)=>b[1]-a[1]).slice(0,5),m=top.length?top[0][1]:1;
- $('top').innerHTML=top.length?top.map(([k,v])=>`<div><span class="mono">${k}</span><span class="t"><i style="width:${v/m*100}%;background:var(--crit)"></i></span><b class="mono">${v}</b></div>`).join(''):'<div class="empty" style="display:block">No suspect devices.</div>'}
+ $('inc').innerHTML=ST.incidents.map(i=>{const T=TYPES[i.type]||{sev:'mu',label:i.type};return `<tr><td><span class="st ${i.active?'a':'e'}">${i.active?'ACTIVE':'Ended'}</span></td><td><span class="tag ${T.sev}">${T.label}</span></td><td class="m">${i.mac}</td><td class="m">${i.first}</td><td class="m">${i.duration}s</td><td class="m">${i.peak}</td><td class="m">${i.alerts}</td><td><span class="tag ${T.sev}">${(i.conf*100).toFixed(0)}%</span></td><td>${i.type=='bcast'?'&mdash;':bl.has(i.mac)?'<span class="st b">Blocked</span>':`<button class="sm" onclick="post('/api/block',{mac:'${i.mac}'})">Block</button>`}</td></tr>`}).join('');$('noinc').style.display=ST.incidents.length?'none':'block';
+ $('bl').innerHTML=ST.blocked.map(b=>`<tr><td class="m">${b.mac}</td><td class="m">${b.time}</td><td>${b.reason}</td><td><button class="sm" onclick="post('/api/unblock',{mac:'${b.mac}'})">Unblock</button></td></tr>`).join('');$('nobl').style.display=ST.blocked.length?'none':'block';$('auto').checked=ST.auto_block;
+ const devs={};AL.forEach(a=>devs[a.mac]=(devs[a.mac]||0)+1);const top=Object.entries(devs).sort((a,b)=>b[1]-a[1]).slice(0,5),m=top.length?top[0][1]:1;
+ $('top').innerHTML=top.length?top.map(([k,v])=>`<div><span class="mono">${k.length>22?k.slice(0,22)+'…':k}</span><span class="t"><i style="width:${v/m*100}%;background:var(--bad)"></i></span><b class="mono">${v}</b></div>`).join(''):'<div class="empty" style="display:block">No suspect devices.</div>'}
+async function tick(){const s=await (await fetch('/api/state')).json();ST=s;H=s.history;AL=s.alerts;run=s.running;
+ $('go').textContent=run?'Stop':'Start';$('go').className=run?'stop':'pri';if(s.error)err(s.error);
+ s.incidents.forEach(i=>{if(i.active&&!seen.has(key(i))){seen.add(key(i));const T=TYPES[i.type]||{label:i.type};toast(`${T.label} detected from ${i.mac.split(',')[0]}`);if($('snd').checked)beep()}});render()}
 view();setInterval(tick,1000);tick();addEventListener('resize',draw);
 </script></body></html>

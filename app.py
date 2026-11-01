@@ -1,7 +1,7 @@
 """Run:  sudo python app.py   ->  open http://127.0.0.1:5000   (sudo only needed for live capture)"""
 import json, os
 from flask import Flask, jsonify, render_template, request
-from engine import Engine
+from engine import Engine, TYPES
 app = Flask(__name__); eng = Engine()
 
 @app.route("/")
@@ -14,12 +14,25 @@ def state(): return jsonify(eng.state())
 def metrics():
     return jsonify(json.load(open("metrics.json")) if os.path.exists("metrics.json") else {})
 
+@app.route("/api/attack_types")
+def attack_types():
+    return jsonify(TYPES)
+
 @app.route("/api/start", methods=["POST"])
 def start():
     d = request.json; eng.start(d["mode"], d["source"], float(d.get("speed", 1))); return jsonify(ok=True)
 
 @app.route("/api/stop", methods=["POST"])
 def stop(): eng.stop(); return jsonify(ok=True)
+
+@app.route("/api/block", methods=["POST"])
+def block(): eng.block(request.json["mac"], "manual"); return jsonify(ok=True)
+
+@app.route("/api/unblock", methods=["POST"])
+def unblock(): eng.unblock(request.json["mac"]); return jsonify(ok=True)
+
+@app.route("/api/autoblock", methods=["POST"])
+def autoblock(): eng.auto_block = bool(request.json["on"]); return jsonify(ok=True)
 
 @app.route("/api/sources")
 def sources():

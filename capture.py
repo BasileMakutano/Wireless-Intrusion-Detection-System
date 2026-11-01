@@ -1,16 +1,18 @@
-"""Frame sources: live monitor-mode sniffing or pcap replay (both via scapy)."""
+"""Frame sources for the multi-class detector: live monitor-mode sniffing, pcap replay, or
+replay of a small rich-CSV demo file (t, sa, ftype, fsubtype, protected, len, rssi -- the same
+schema features.py expects), all via scapy (and pandas for the CSV case)."""
 import queue, threading, time
-from scapy.all import sniff, PcapReader, Dot11
-
-ASSOC = {0, 1, 2, 3}      # association / reassociation request + response
-DISASSOC = {10, 12}       # disassociation, deauthentication
+from scapy.all import sniff, PcapReader, RadioTap, Dot11
 
 def parse(p):
-    """Convert a Wi-Fi frame into an event matching the training data, or None if irrelevant."""
+    """One 802.11 frame -> the raw fields features.py needs, or None if not a Wi-Fi frame."""
     if not p.haslayer(Dot11): return None
     d = p[Dot11]
-    if d.type != 0 or not d.addr2 or d.subtype not in ASSOC | DISASSOC: return None
-    return dict(t=float(p.time), dev=d.addr2, dis=int(d.subtype in DISASSOC))
+    if d.addr2 is None: return None   # no transmitter address (most Control frames) -> unattributable
+    rssi = getattr(p[RadioTap], "dBm_AntSignal", None) if p.haslayer(RadioTap) else None
+    return dict(t=float(p.time), sa=d.addr2, ftype=d.type, fsubtype=d.subtype,
+                protected=int(bool(d.FCfield & 0x40)), len=len(p),
+                rssi=None if rssi is None else float(rssi))
 
 def live_frames(iface, stop):
     q = queue.Queue()
@@ -32,14 +34,13 @@ def pcap_frames(path, stop, speed=1.0):
         last = f["t"]; yield f
 
 def csv_frames(path, stop, speed=1.0):
-    """Replay events from a dataset-format CSV (@timestamp, mac_address, association)."""
+    """Replay a small demo CSV with columns: t,sa,ftype,fsubtype,protected,len,rssi."""
     import pandas as pd
-    d = pd.read_csv(path)
-    ts = pd.to_datetime(d["@timestamp"].str.replace(" @ ", " "), format="%b %d, %Y %H:%M:%S.%f")
-    ev = pd.DataFrame({"t": (ts - pd.Timestamp("1970-01-01")) / pd.Timedelta(seconds=1),
-                       "dev": d["mac_address"], "dis": (d["association"] == "disassociated").astype(int)}).sort_values("t")
+    d = pd.read_csv(path).sort_values("t")
     last = None
-    for r in ev.itertuples():
+    for r in d.itertuples():
         if stop.is_set(): return
         if last is not None and speed > 0: time.sleep(min(max(r.t - last, 0) / speed, 0.5))
-        last = r.t; yield dict(t=r.t, dev=r.dev, dis=r.dis)
+        last = r.t
+        yield dict(t=r.t, sa=r.sa, ftype=r.ftype, fsubtype=r.fsubtype,
+                   protected=r.protected, len=r.len, rssi=(None if pd.isna(r.rssi) else r.rssi))

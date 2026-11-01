@@ -1,0 +1,85 @@
+
+# ==========================================
+# WIDS-WIPS V2 - GITIGNORE
+# ==========================================
+
+# 1. Python virtual environments
+venv/
+.venv/
+env/
+ENV/
+
+# 2. Python cache and compiled files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# 3. Jupyter Notebook
+.ipynb_checkpoints/
+
+# 4. IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# 5. Environment variables and secrets
+.env
+.env.*
+!.env.example
+
+# 6. Machine learning models
+*.joblib
+*.pkl
+*.pickle
+*.model
+
+# 7. Original datasets
+AWID3_Dataset/
+Aassociation-Disassociation_Dataset.csv
+
+# 8. Generated training datasets
+awid3_frames_all.csv
+awid3_frames.csv
+awid3_frames_dd.csv
+awid3_train.csv
+
+# 9. Runtime data and logs
+alerts.csv
+*.log
+logs/
+
+# 10. Old simulations
+demo_attack.csv
+timeline_demo.json
+make_demo.py
+
+# 11. Old model evaluation results
+confusion_matrix.png
+
+# 12. Temporary files
+*.tmp
+*.bak
+*.old
+*.orig
+
+# 13. Build and distribution
+build/
+dist/
+*.egg-info/
+
+# 14. Operating system files
+Thumbs.db
+.DS_Store
+desktop.ini
+
+# ==========================================
+# KEEP TRACKED IN V2:
+# metrics_v2.json
+# confusion_matrix_v2.png
+# README.md
+# poster.pdf
+# ==========================================
