@@ -82,7 +82,6 @@ make_poster.py
 extract_awid3.py
 build_training.py
 train.py
-train_v2.py
 make_demo.py
 
 # Presentation files
